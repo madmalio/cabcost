@@ -49,14 +49,14 @@ func ensureMaterial(database *sql.DB, name, role, unit string, cost, waste float
 }
 
 func ensureAssembly(database *sql.DB, name, typ, style string, core, back, panel, faceLumber, edgeband, hardware *int64,
-	isOutsourced, requiresFinish, requiresEdgeband bool, finishLabor, prepLabor, buildLabor float64, isDefault bool) error {
+	isOutsourced, requiresFinish, requiresEdgeband bool, finishLabor, prepLabor, buildLabor float64, isDefault bool, panelType, frameJoinery string, panelPrepLabor float64) error {
 	if _, err := database.Exec(
 		`INSERT INTO construction_assemblies
-		   (name, type, construction_style, core_material_id, back_material_id, panel_material_id, face_lumber_id, edgeband_id, hardware_id, is_outsourced, requires_finish, requires_edgeband, finish_labor_hours, prep_labor_hours, build_labor_hours, is_default)
-		 SELECT ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
+		   (name, type, construction_style, core_material_id, back_material_id, panel_material_id, face_lumber_id, edgeband_id, hardware_id, is_outsourced, requires_finish, requires_edgeband, panel_type, frame_joinery, finish_labor_hours, prep_labor_hours, panel_prep_labor_hours, build_labor_hours, is_default)
+		 SELECT ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
 		 WHERE NOT EXISTS (SELECT 1 FROM construction_assemblies WHERE name = ?)`,
 		name, typ, style, core, back, panel, faceLumber, edgeband, hardware,
-		isOutsourced, requiresFinish, requiresEdgeband, finishLabor, prepLabor, buildLabor, isDefault, name,
+		isOutsourced, requiresFinish, requiresEdgeband, panelType, frameJoinery, finishLabor, prepLabor, panelPrepLabor, buildLabor, isDefault, name,
 	); err != nil {
 		return fmt.Errorf("ensure assembly %q: %w", name, err)
 	}
@@ -146,19 +146,19 @@ func migrateDataV3(database *sql.DB) error {
 	}
 
 	// Insert the profiles that didn't exist before the refactor.
-	if err := ensureAssembly(database, `Slab Door`, models.AssemblyTypeDoor, models.StyleFaceFrame, mdfSlab, nil, nil, nil, nil, hinge, false, false, false, 0, 0, 0.3, false); err != nil {
+	if err := ensureAssembly(database, `Slab Door`, models.AssemblyTypeDoor, models.StyleFaceFrame, mdfSlab, nil, nil, nil, nil, hinge, false, false, false, 0, 0, 0.3, false, models.PanelTypeFlat, models.FrameJoinerySlab, 0.0); err != nil {
 		return err
 	}
-	if err := ensureAssembly(database, `Matching 5-Piece Shaker Front`, models.AssemblyTypeDrawerFront, models.StyleFaceFrame, poplar, nil, mdfPanel, nil, nil, nil, false, false, false, 0, 0, 0.7, true); err != nil {
+	if err := ensureAssembly(database, `Matching 5-Piece Shaker Front`, models.AssemblyTypeDrawerFront, models.StyleFaceFrame, poplar, nil, mdfPanel, nil, nil, nil, false, false, false, 0, 0, 0.7, true, models.PanelTypeFlat, models.FrameJoineryCopeAndStick, 0.0); err != nil {
 		return err
 	}
-	if err := ensureAssembly(database, `Solid Slab Front`, models.AssemblyTypeDrawerFront, models.StyleFaceFrame, mdfSlab, nil, nil, nil, nil, nil, false, false, false, 0, 0, 0.25, false); err != nil {
+	if err := ensureAssembly(database, `Solid Slab Front`, models.AssemblyTypeDrawerFront, models.StyleFaceFrame, mdfSlab, nil, nil, nil, nil, nil, false, false, false, 0, 0, 0.25, false, models.PanelTypeFlat, models.FrameJoinerySlab, 0.0); err != nil {
 		return err
 	}
-	if err := ensureAssembly(database, `Outsourced Raw Front`, models.AssemblyTypeDrawerFront, models.StyleFaceFrame, nil, nil, nil, nil, nil, nil, true, false, false, 0, 0.05, 0, false); err != nil {
+	if err := ensureAssembly(database, `Outsourced Raw Front`, models.AssemblyTypeDrawerFront, models.StyleFaceFrame, nil, nil, nil, nil, nil, nil, true, false, false, 0, 0.05, 0, false, models.PanelTypeFlat, models.FrameJoineryCopeAndStick, 0.0); err != nil {
 		return err
 	}
-	if err := ensureAssembly(database, `Standard Stapled Melamine (Side-Mount)`, models.AssemblyTypeDrawerBox, models.StyleFaceFrame, melamineCore, melamineBack, nil, nil, nil, sideMount, false, false, true, 0, 0, 0.25, false); err != nil {
+	if err := ensureAssembly(database, `Standard Stapled Melamine (Side-Mount)`, models.AssemblyTypeDrawerBox, models.StyleFaceFrame, melamineCore, melamineBack, nil, nil, nil, sideMount, false, false, true, 0, 0, 0.25, false, models.PanelTypeFlat, models.FrameJoineryCopeAndStick, 0.0); err != nil {
 		return err
 	}
 
@@ -169,6 +169,61 @@ func migrateDataV3(database *sql.DB) error {
 		 WHERE drawer_front_assembly_id IS NULL OR drawer_front_assembly_id = 0`,
 	); err != nil {
 		return fmt.Errorf("backfill drawer_front_assembly_id: %w", err)
+	}
+
+	return nil
+}
+
+// migrateDataV4 adds the raised-panel and mitered door/front profiles introduced
+// with panel_type / frame_joinery / panel_prep_labor_hours. It runs exactly once
+// (guarded by user_version). Existing rows already receive the new columns'
+// defaults (flat / cope_and_stick / 0.0) via ALTER TABLE ADD COLUMN.
+func migrateDataV4(database *sql.DB) error {
+	if err := ensureMaterial(database, `4/4 Superior Alder`, models.RoleFrameLumber, models.UnitBoardFoot, 5.50, 25.0); err != nil {
+		return err
+	}
+
+	hinge, err := hardwareIDByName(database, `Blum Soft-Close 110 Hinge + Plate`)
+	if err != nil {
+		return err
+	}
+	poplar, err := materialIDByName(database, `4/4 Select Poplar (Door Stock)`)
+	if err != nil {
+		return err
+	}
+	alder, err := materialIDByName(database, `4/4 Superior Alder`)
+	if err != nil {
+		return err
+	}
+	mdfSlab, err := materialIDByName(database, `3/4" MDF (Slab)`)
+	if err != nil {
+		return err
+	}
+	mdfPanel, err := materialIDByName(database, `1/4" MDF (Door Panel)`)
+	if err != nil {
+		return err
+	}
+
+	// Door profiles.
+	if err := ensureAssembly(database, `Paint-Grade Raised Panel Door`, models.AssemblyTypeDoor, models.StyleFaceFrame, poplar, nil, mdfSlab, nil, nil, hinge, false, false, false, 0, 0, 1.1, false, models.PanelTypeRaisedSheet, models.FrameJoineryCopeAndStick, 0.0); err != nil {
+		return err
+	}
+	if err := ensureAssembly(database, `Stained Alder Raised Panel Door`, models.AssemblyTypeDoor, models.StyleFaceFrame, alder, nil, alder, nil, nil, hinge, false, false, false, 0, 0, 1.1, false, models.PanelTypeRaisedSolid, models.FrameJoineryCopeAndStick, 0.4); err != nil {
+		return err
+	}
+	if err := ensureAssembly(database, `In-House Mitered Shaker Door`, models.AssemblyTypeDoor, models.StyleFaceFrame, poplar, nil, mdfPanel, nil, nil, hinge, false, false, false, 0, 0, 1.5, false, models.PanelTypeFlat, models.FrameJoineryMitered, 0.0); err != nil {
+		return err
+	}
+
+	// Drawer front profiles.
+	if err := ensureAssembly(database, `Matching Raised Panel Front (Paint-Grade)`, models.AssemblyTypeDrawerFront, models.StyleFaceFrame, poplar, nil, mdfSlab, nil, nil, nil, false, false, false, 0, 0, 0.8, false, models.PanelTypeRaisedSheet, models.FrameJoineryCopeAndStick, 0.0); err != nil {
+		return err
+	}
+	if err := ensureAssembly(database, `Matching Raised Panel Front (Stained Solid)`, models.AssemblyTypeDrawerFront, models.StyleFaceFrame, alder, nil, alder, nil, nil, nil, false, false, false, 0, 0, 0.8, false, models.PanelTypeRaisedSolid, models.FrameJoineryCopeAndStick, 0.4); err != nil {
+		return err
+	}
+	if err := ensureAssembly(database, `In-House Mitered Shaker Front`, models.AssemblyTypeDrawerFront, models.StyleFaceFrame, poplar, nil, mdfPanel, nil, nil, nil, false, false, false, 0, 0, 0.9, false, models.PanelTypeFlat, models.FrameJoineryMitered, 0.0); err != nil {
+		return err
 	}
 
 	return nil

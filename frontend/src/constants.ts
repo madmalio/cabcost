@@ -120,8 +120,11 @@ export interface Assembly {
   is_outsourced: boolean;
   requires_finish: boolean;
   requires_edgeband: boolean;
+  panel_type: string;
+  frame_joinery: string;
   finish_labor_hours: number;
   prep_labor_hours: number;
+  panel_prep_labor_hours: number;
   build_labor_hours: number;
   is_default: boolean;
   created_at: string;
@@ -189,6 +192,30 @@ export function constructionStyleLabel(s: string): string {
   }
 }
 
+export const PANEL_TYPES: SelectOption[] = [
+  { value: 'flat', label: '1/4" Flat Panel' },
+  { value: 'raised_sheet', label: '3/4" Raised Sheet (MDF)' },
+  { value: 'raised_solid', label: 'Solid Wood Raised Panel (Glued Lumber)' },
+];
+
+export const FRAME_JOINERY: SelectOption[] = [
+  { value: 'cope_and_stick', label: 'Cope and Stick' },
+  { value: 'mitered', label: 'Mitered' },
+];
+
+export function panelTypeLabel(t: string): string {
+  return PANEL_TYPES.find((p) => p.value === t)?.label ?? t;
+}
+
+export function frameJoineryLabel(j: string): string {
+  switch (j) {
+    case 'cope_and_stick': return 'Cope & Stick';
+    case 'mitered': return 'Mitered';
+    case 'slab': return 'Slab';
+    default: return j;
+  }
+}
+
 export function unitLabel(unit: string): string {
   const match = [...MATERIAL_UNITS, ...HARDWARE_UNITS].find((u) => u.value === unit);
   return match?.label ?? unit;
@@ -205,6 +232,7 @@ export interface Quote {
   drawer_front_assembly_id: number;
   drawer_assembly_id: number;
   is_finished: boolean;
+  has_edge_detail: boolean;
   target_margin_percent: number;
   prefab_margin_percent: number;
   notes: string;

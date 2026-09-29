@@ -34,6 +34,7 @@ import Badge from './Badge';
 import ConfirmDialog from './ConfirmDialog';
 import AddCabinetModal from './AddCabinetModal';
 import BuyoutModal from './BuyoutModal';
+import QuotePrintView from './QuotePrintView';
 import { iconButtonClass, inputClass, labelClass, primaryButtonClass, secondaryButtonClass } from './ui';
 
 const currency = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' });
@@ -125,6 +126,7 @@ export default function QuoteWorkbench({ quoteId, onBack, onDuplicate }: QuoteWo
             quote.drawer_front_assembly_id,
             quote.drawer_assembly_id,
             quote.is_finished,
+            quote.has_edge_detail,
           ),
         ),
       );
@@ -174,7 +176,7 @@ export default function QuoteWorkbench({ quoteId, onBack, onDuplicate }: QuoteWo
     return () => {
       cancelled = true;
     };
-  }, [quote?.box_assembly_id, quote?.door_assembly_id, quote?.drawer_front_assembly_id, quote?.drawer_assembly_id, quote?.is_finished, quote?.target_margin_percent, cabinets, buyouts]);
+  }, [quote?.box_assembly_id, quote?.door_assembly_id, quote?.drawer_front_assembly_id, quote?.drawer_assembly_id, quote?.is_finished, quote?.has_edge_detail, quote?.target_margin_percent, cabinets, buyouts]);
 
   const patchQuote = (patch: Partial<Quote>) => {
     setQuote((q) => (q ? { ...q, ...patch } : q));
@@ -298,7 +300,8 @@ export default function QuoteWorkbench({ quoteId, onBack, onDuplicate }: QuoteWo
   }
 
   return (
-    <div className="flex h-full flex-col overflow-hidden">
+    <>
+    <div className="flex h-full flex-col overflow-hidden print:hidden">
       <header className="flex items-center justify-between border-b border-zinc-800 px-6 py-4 print:hidden">
         <div className="flex items-center gap-3">
           <button type="button" className={iconButtonClass} onClick={onBack} title="Back">
@@ -430,6 +433,21 @@ export default function QuoteWorkbench({ quoteId, onBack, onDuplicate }: QuoteWo
                     value={quote.target_margin_percent}
                     onChange={(e) => patchQuote({ target_margin_percent: Number(e.target.value) || 0 })}
                   />
+                </div>
+              </div>
+              <div className="mt-4 flex items-start gap-3 rounded-lg border border-zinc-800 bg-zinc-950/40 p-3">
+                <input
+                  type="checkbox"
+                  id="edge-detail"
+                  className="mt-0.5 h-4 w-4 rounded border-zinc-600 bg-zinc-800 accent-zinc-100"
+                  checked={quote.has_edge_detail}
+                  onChange={(e) => patchQuote({ has_edge_detail: e.target.checked })}
+                />
+                <div>
+                  <label htmlFor="edge-detail" className="cursor-pointer text-sm font-medium text-zinc-200">
+                    Outside Edge Detail
+                  </label>
+                  <p className="text-xs text-zinc-500">Adds shaper &amp; detail-sanding labor to all doors and drawer fronts.</p>
                 </div>
               </div>
             </div>
@@ -648,6 +666,16 @@ export default function QuoteWorkbench({ quoteId, onBack, onDuplicate }: QuoteWo
         />
       )}
     </div>
+
+    <QuotePrintView
+      quote={quote}
+      cabinets={cabinets}
+      buyouts={buyouts}
+      summary={summary}
+      costs={costs}
+      catalogBySku={catalogBySku}
+    />
+    </>
   );
 }
 

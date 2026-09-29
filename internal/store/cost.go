@@ -24,8 +24,8 @@ const (
 
 const assemblyCols = `id, name, type, construction_style, core_material_id, back_material_id,
 	panel_material_id, face_lumber_id, edgeband_id, hardware_id, is_outsourced,
-	requires_finish, requires_edgeband, finish_labor_hours,
-	prep_labor_hours, build_labor_hours, is_default, created_at`
+	requires_finish, requires_edgeband, panel_type, frame_joinery, finish_labor_hours,
+	prep_labor_hours, panel_prep_labor_hours, build_labor_hours, is_default, created_at`
 
 const materialCols = `id, name, role, unit, unit_cost, waste_percent, created_at`
 
@@ -40,8 +40,8 @@ func scanAssembly(r rowScanner) (models.Assembly, error) {
 	err := r.Scan(
 		&a.ID, &a.Name, &a.Type, &a.ConstructionStyle,
 		&a.CoreMaterialID, &a.BackMaterialID, &a.PanelMaterialID, &a.FaceLumberID, &a.EdgebandID, &a.HardwareID,
-		&a.IsOutsourced, &a.RequiresFinish, &a.RequiresEdgeband, &a.FinishLaborHours,
-		&a.PrepLaborHours, &a.BuildLaborHours, &a.IsDefault, &a.CreatedAt,
+		&a.IsOutsourced, &a.RequiresFinish, &a.RequiresEdgeband, &a.PanelType, &a.FrameJoinery, &a.FinishLaborHours,
+		&a.PrepLaborHours, &a.PanelPrepLaborHours, &a.BuildLaborHours, &a.IsDefault, &a.CreatedAt,
 	)
 	return a, err
 }
@@ -202,19 +202,19 @@ func (s *Store) loadCabinet(sku string) (models.Cabinet, error) {
 }
 
 // CalculateCabinetCost produces a full itemized cost breakdown for a catalog
-// SKU given the box, door, drawer front, and drawer box assemblies and finish
-// state. Zero assembly IDs resolve to their type default.
-func (s *Store) CalculateCabinetCost(sku string, boxAssemblyID, doorAssemblyID, drawerFrontAssemblyID, drawerBoxAssemblyID int64, isFinished bool) (models.CabinetCostBreakdown, error) {
+// SKU given the box, door, drawer front, and drawer box assemblies, finish
+// state, and edge-detail flag. Zero assembly IDs resolve to their type default.
+func (s *Store) CalculateCabinetCost(sku string, boxAssemblyID, doorAssemblyID, drawerFrontAssemblyID, drawerBoxAssemblyID int64, isFinished, edgeDetail bool) (models.CabinetCostBreakdown, error) {
 	c, err := s.loadCabinet(sku)
 	if err != nil {
 		return models.CabinetCostBreakdown{}, err
 	}
-	return s.calculateCabinet(c, boxAssemblyID, doorAssemblyID, drawerFrontAssemblyID, drawerBoxAssemblyID, isFinished)
+	return s.calculateCabinet(c, boxAssemblyID, doorAssemblyID, drawerFrontAssemblyID, drawerBoxAssemblyID, isFinished, edgeDetail)
 }
 
 // CalculateCabinetCostOverride is like CalculateCabinetCost but lets width,
 // height, and depth override the catalog dimensions (0 means "use catalog").
-func (s *Store) CalculateCabinetCostOverride(sku string, width, height, depth float64, boxAssemblyID, doorAssemblyID, drawerFrontAssemblyID, drawerBoxAssemblyID int64, isFinished bool) (models.CabinetCostBreakdown, error) {
+func (s *Store) CalculateCabinetCostOverride(sku string, width, height, depth float64, boxAssemblyID, doorAssemblyID, drawerFrontAssemblyID, drawerBoxAssemblyID int64, isFinished, edgeDetail bool) (models.CabinetCostBreakdown, error) {
 	c, err := s.loadCabinet(sku)
 	if err != nil {
 		return models.CabinetCostBreakdown{}, err
@@ -228,11 +228,11 @@ func (s *Store) CalculateCabinetCostOverride(sku string, width, height, depth fl
 	if depth > 0 {
 		c.Depth = depth
 	}
-	return s.calculateCabinet(c, boxAssemblyID, doorAssemblyID, drawerFrontAssemblyID, drawerBoxAssemblyID, isFinished)
+	return s.calculateCabinet(c, boxAssemblyID, doorAssemblyID, drawerFrontAssemblyID, drawerBoxAssemblyID, isFinished, edgeDetail)
 }
 
 // calculateCabinet is the shared core of the parametric cost engine.
-func (s *Store) calculateCabinet(c models.Cabinet, boxAssemblyID, doorAssemblyID, drawerFrontAssemblyID, drawerBoxAssemblyID int64, isFinished bool) (models.CabinetCostBreakdown, error) {
+func (s *Store) calculateCabinet(c models.Cabinet, boxAssemblyID, doorAssemblyID, drawerFrontAssemblyID, drawerBoxAssemblyID int64, isFinished, edgeDetail bool) (models.CabinetCostBreakdown, error) {
 	box, err := s.assemblyByIDOrDefault(boxAssemblyID, models.AssemblyTypeBox)
 	if err != nil {
 		return models.CabinetCostBreakdown{}, fmt.Errorf("resolve box assembly: %w", err)
@@ -397,8 +397,22 @@ func (s *Store) calculateCabinet(c models.Cabinet, boxAssemblyID, doorAssemblyID
 			if doorFrameMat.ID != 0 {
 				addMaterial("Door Frame Lumber", materialCost(doorFrameMat, frameBF))
 			}
-			if doorPanelMat.ID != 0 {
-				addMaterial("Door Panels", sheetCost(doorPanelMat, panelSqFt))
+			switch door.PanelType {
+			case models.PanelTypeRaisedSolid:
+				if doorPanelMat.ID != 0 {
+					addMaterial("Door Panels (Solid)", materialCost(doorPanelMat, panelSqFt))
+				}
+				if door.PanelPrepLaborHours > 0 {
+					addLabor("Panel Glue & Clamp", door.PanelPrepLaborHours*float64(c.DoorsCount))
+				}
+			case models.PanelTypeRaisedSheet:
+				if doorPanelMat.ID != 0 {
+					addMaterial("Door Panels (Raised)", sheetCost(doorPanelMat, panelSqFt))
+				}
+			default:
+				if doorPanelMat.ID != 0 {
+					addMaterial("Door Panels", sheetCost(doorPanelMat, panelSqFt))
+				}
 			}
 			addLabor("Doors", door.BuildLaborHours*float64(c.DoorsCount))
 		}
@@ -424,11 +438,31 @@ func (s *Store) calculateCabinet(c models.Cabinet, boxAssemblyID, doorAssemblyID
 			if frontFrameMat.ID != 0 {
 				addMaterial("Drawer Front Frame Lumber", materialCost(frontFrameMat, frameBF))
 			}
-			if frontPanelMat.ID != 0 {
-				addMaterial("Drawer Front Panels", sheetCost(frontPanelMat, panelSqFt))
+			switch drawerFront.PanelType {
+			case models.PanelTypeRaisedSolid:
+				if frontPanelMat.ID != 0 {
+					addMaterial("Drawer Front Panels (Solid)", materialCost(frontPanelMat, panelSqFt))
+				}
+				if drawerFront.PanelPrepLaborHours > 0 {
+					addLabor("Panel Glue & Clamp", drawerFront.PanelPrepLaborHours*float64(c.DrawersCount))
+				}
+			case models.PanelTypeRaisedSheet:
+				if frontPanelMat.ID != 0 {
+					addMaterial("Drawer Front Panels (Raised)", sheetCost(frontPanelMat, panelSqFt))
+				}
+			default:
+				if frontPanelMat.ID != 0 {
+					addMaterial("Drawer Front Panels", sheetCost(frontPanelMat, panelSqFt))
+				}
 			}
 			addLabor("Drawer Fronts", drawerFront.BuildLaborHours*float64(c.DrawersCount))
 		}
+	}
+
+	// 5b. Project-wide edge detail: perimeter routing + profile hand-sanding
+	// across all doors and drawer fronts.
+	if edgeDetail && (c.DoorsCount > 0 || c.DrawersCount > 0) {
+		addLabor("Door Edge Detail", 0.15*float64(c.DoorsCount+c.DrawersCount))
 	}
 
 	// 6. Drawer boxes.

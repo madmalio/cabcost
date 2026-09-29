@@ -136,6 +136,34 @@ var ValidConstructionStyles = []string{
 	StyleFrameless,
 }
 
+// Panel type values.
+const (
+	PanelTypeFlat        = "flat"
+	PanelTypeRaisedSheet = "raised_sheet"
+	PanelTypeRaisedSolid = "raised_solid"
+)
+
+// ValidPanelTypes lists every allowed panel type.
+var ValidPanelTypes = []string{
+	PanelTypeFlat,
+	PanelTypeRaisedSheet,
+	PanelTypeRaisedSolid,
+}
+
+// Frame joinery values.
+const (
+	FrameJoineryCopeAndStick = "cope_and_stick"
+	FrameJoineryMitered      = "mitered"
+	FrameJoinerySlab         = "slab"
+)
+
+// ValidFrameJoinery lists every allowed frame joinery style.
+var ValidFrameJoinery = []string{
+	FrameJoineryCopeAndStick,
+	FrameJoineryMitered,
+	FrameJoinerySlab,
+}
+
 // Assembly is a reusable shop build package that links materials by role.
 type Assembly struct {
 	ID                int64   `json:"id"`
@@ -151,8 +179,11 @@ type Assembly struct {
 	IsOutsourced      bool    `json:"is_outsourced"`
 	RequiresFinish    bool    `json:"requires_finish"`
 	RequiresEdgeband  bool    `json:"requires_edgeband"`
+	PanelType         string  `json:"panel_type"`
+	FrameJoinery      string  `json:"frame_joinery"`
 	FinishLaborHours  float64 `json:"finish_labor_hours"`
 	PrepLaborHours    float64 `json:"prep_labor_hours"`
+	PanelPrepLaborHours float64 `json:"panel_prep_labor_hours"`
 	BuildLaborHours   float64 `json:"build_labor_hours"`
 	IsDefault         bool    `json:"is_default"`
 	CreatedAt         string  `json:"created_at"`
@@ -255,6 +286,7 @@ type Quote struct {
 	DrawerFrontAssemblyID int64  `json:"drawer_front_assembly_id"`
 	DrawerAssemblyID     int64   `json:"drawer_assembly_id"`
 	IsFinished           bool    `json:"is_finished"`
+	HasEdgeDetail        bool    `json:"has_edge_detail"`
 	TargetMarginPercent  float64 `json:"target_margin_percent"`
 	PrefabMarginPercent  float64 `json:"prefab_margin_percent"`
 	Notes                string  `json:"notes"`

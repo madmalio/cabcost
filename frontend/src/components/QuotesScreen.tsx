@@ -1,11 +1,11 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Plus, Search, ChevronRight } from 'lucide-react';
+import { Plus, Search, Copy, Trash2 } from 'lucide-react';
 import { api } from '../api';
 import type { QuoteListItem } from '../constants';
-import { quoteStatusBadge, quoteStatusLabel } from '../constants';
-import Badge from './Badge';
+import { QUOTE_STATUSES, quoteStatusBadge } from '../constants';
+import ConfirmDialog from './ConfirmDialog';
 import QuoteWorkbench from './QuoteWorkbench';
-import { primaryButtonClass } from './ui';
+import { iconButtonClass, primaryButtonClass } from './ui';
 
 const currency = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' });
 
@@ -20,6 +20,7 @@ export default function QuotesScreen() {
   const [error, setError] = useState('');
   const [workbenchId, setWorkbenchId] = useState<number | null>(null);
   const [creating, setCreating] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState<QuoteListItem | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -68,6 +69,7 @@ export default function QuotesScreen() {
         drawer_front_assembly_id: defaultAssemblyID(fronts),
         drawer_assembly_id: defaultAssemblyID(drawers),
         is_finished: true,
+        has_edge_detail: false,
         target_margin_percent: 30,
         prefab_margin_percent: 35,
         notes: '',
@@ -79,6 +81,39 @@ export default function QuotesScreen() {
       setError(String(err));
     } finally {
       setCreating(false);
+    }
+  };
+
+  const handleDuplicate = async (q: QuoteListItem) => {
+    setError('');
+    try {
+      await api.duplicateQuote(q.id);
+      await load();
+    } catch (err) {
+      setError(String(err));
+    }
+  };
+
+  const handleDelete = async () => {
+    if (!confirmDelete) return;
+    setError('');
+    try {
+      await api.deleteQuote(confirmDelete.id);
+      setConfirmDelete(null);
+      await load();
+    } catch (err) {
+      setError(String(err));
+    }
+  };
+
+  const handleStatusChange = async (q: QuoteListItem, status: string) => {
+    if (status === q.status) return;
+    setError('');
+    try {
+      await api.updateQuoteStatus(q.id, status);
+      await load();
+    } catch (err) {
+      setError(String(err));
     }
   };
 
@@ -156,7 +191,18 @@ export default function QuotesScreen() {
                   <td className="py-3 pr-4 font-medium text-zinc-100">{q.job_name}</td>
                   <td className="py-3 pr-4 text-zinc-400">{q.client_name || '—'}</td>
                   <td className="py-3 pr-4">
-                    <Badge className={quoteStatusBadge(q.status)}>{quoteStatusLabel(q.status)}</Badge>
+                    <select
+                      className={`cursor-pointer rounded-md border px-2 py-1 text-xs font-medium outline-none transition-colors focus:ring-1 focus:ring-zinc-600 ${quoteStatusBadge(q.status)}`}
+                      value={q.status}
+                      onClick={(e) => e.stopPropagation()}
+                      onChange={(e) => void handleStatusChange(q, e.target.value)}
+                    >
+                      {QUOTE_STATUSES.map((s) => (
+                        <option key={s.value} value={s.value} className="bg-zinc-900 text-zinc-100">
+                          {s.label}
+                        </option>
+                      ))}
+                    </select>
                   </td>
                   <td className="py-3 pr-4 text-right tabular-nums text-zinc-300">{q.total_cabinets}</td>
                   <td className="py-3 pr-4 text-right tabular-nums font-medium text-zinc-100">
@@ -166,7 +212,30 @@ export default function QuotesScreen() {
                     {q.updated_at ? new Date(q.updated_at).toLocaleDateString() : '—'}
                   </td>
                   <td className="py-3 text-right">
-                    <ChevronRight className="ml-auto h-4 w-4 text-zinc-600" />
+                    <div className="flex items-center justify-end gap-1">
+                      <button
+                        type="button"
+                        className={iconButtonClass}
+                        title="Duplicate"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          void handleDuplicate(q);
+                        }}
+                      >
+                        <Copy className="h-4 w-4" />
+                      </button>
+                      <button
+                        type="button"
+                        className={`${iconButtonClass} hover:bg-red-950/60 hover:text-red-300`}
+                        title="Delete"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setConfirmDelete(q);
+                        }}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </button>
+                    </div>
                   </td>
                 </tr>
               ))}
@@ -174,6 +243,15 @@ export default function QuotesScreen() {
           </table>
         )}
       </div>
+
+      {confirmDelete && (
+        <ConfirmDialog
+          title="Delete Quote"
+          message={`Are you sure you want to delete "${confirmDelete.job_name}"? This cannot be undone.`}
+          onConfirm={() => void handleDelete()}
+          onCancel={() => setConfirmDelete(null)}
+        />
+      )}
     </div>
   );
 }

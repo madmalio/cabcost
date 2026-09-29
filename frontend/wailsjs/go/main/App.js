@@ -10,12 +10,12 @@ export function AddQuoteCabinet(arg1) {
   return window['go']['main']['App']['AddQuoteCabinet'](arg1);
 }
 
-export function CalculateCabinetCost(arg1, arg2, arg3, arg4, arg5, arg6) {
-  return window['go']['main']['App']['CalculateCabinetCost'](arg1, arg2, arg3, arg4, arg5, arg6);
+export function CalculateCabinetCost(arg1, arg2, arg3, arg4, arg5, arg6, arg7) {
+  return window['go']['main']['App']['CalculateCabinetCost'](arg1, arg2, arg3, arg4, arg5, arg6, arg7);
 }
 
-export function CalculateCabinetCostOverride(arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9) {
-  return window['go']['main']['App']['CalculateCabinetCostOverride'](arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9);
+export function CalculateCabinetCostOverride(arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, arg10) {
+  return window['go']['main']['App']['CalculateCabinetCostOverride'](arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, arg10);
 }
 
 export function DeleteAssembly(arg1) {
@@ -112,4 +112,8 @@ export function UpdateQuoteBuyout(arg1) {
 
 export function UpdateQuoteCabinet(arg1) {
   return window['go']['main']['App']['UpdateQuoteCabinet'](arg1);
+}
+
+export function UpdateQuoteStatus(arg1, arg2) {
+  return window['go']['main']['App']['UpdateQuoteStatus'](arg1, arg2);
 }

@@ -53,8 +53,11 @@ CREATE TABLE IF NOT EXISTS construction_assemblies (
 	is_outsourced BOOLEAN DEFAULT 0,
 	requires_finish BOOLEAN DEFAULT 0,
 	requires_edgeband BOOLEAN DEFAULT 0,
+	panel_type TEXT DEFAULT 'flat',
+	frame_joinery TEXT DEFAULT 'cope_and_stick',
 	finish_labor_hours REAL DEFAULT 0.0,
 	prep_labor_hours REAL DEFAULT 0.0,
+	panel_prep_labor_hours REAL DEFAULT 0.0,
 	build_labor_hours REAL DEFAULT 0.0,
 	is_default BOOLEAN DEFAULT 0,
 	created_at DATETIME DEFAULT CURRENT_TIMESTAMP
@@ -86,6 +89,7 @@ CREATE TABLE IF NOT EXISTS quotes (
 	drawer_front_assembly_id INTEGER REFERENCES construction_assemblies(id),
 	drawer_assembly_id INTEGER REFERENCES construction_assemblies(id),
 	is_finished BOOLEAN DEFAULT 1,
+	has_edge_detail BOOLEAN DEFAULT 0,
 	target_margin_percent REAL DEFAULT 30.0,
 	prefab_margin_percent REAL DEFAULT 35.0,
 	notes TEXT,
@@ -184,7 +188,19 @@ func migrate(database *sql.DB) error {
 	if err := addColumnIfMissing(database, "construction_assemblies", "finish_labor_hours", "REAL DEFAULT 0.0"); err != nil {
 		return err
 	}
+	if err := addColumnIfMissing(database, "construction_assemblies", "panel_type", "TEXT DEFAULT 'flat'"); err != nil {
+		return err
+	}
+	if err := addColumnIfMissing(database, "construction_assemblies", "frame_joinery", "TEXT DEFAULT 'cope_and_stick'"); err != nil {
+		return err
+	}
+	if err := addColumnIfMissing(database, "construction_assemblies", "panel_prep_labor_hours", "REAL DEFAULT 0.0"); err != nil {
+		return err
+	}
 	if err := addColumnIfMissing(database, "quotes", "drawer_front_assembly_id", "INTEGER REFERENCES construction_assemblies(id)"); err != nil {
+		return err
+	}
+	if err := addColumnIfMissing(database, "quotes", "has_edge_detail", "BOOLEAN DEFAULT 0"); err != nil {
 		return err
 	}
 
@@ -203,6 +219,14 @@ func migrate(database *sql.DB) error {
 			}
 		}
 		if err := setUserVersion(database, 3); err != nil {
+			return err
+		}
+	}
+	if version < 4 {
+		if err := migrateDataV4(database); err != nil {
+			return err
+		}
+		if err := setUserVersion(database, 4); err != nil {
 			return err
 		}
 	}

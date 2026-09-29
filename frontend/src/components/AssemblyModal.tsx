@@ -2,7 +2,7 @@ import { useState, useMemo } from 'react';
 import Modal from './Modal';
 import { inputClass, labelClass, primaryButtonClass, secondaryButtonClass } from './ui';
 import type { Assembly, Hardware, Material } from '../constants';
-import { unitLabel } from '../constants';
+import { PANEL_TYPES, FRAME_JOINERY, unitLabel } from '../constants';
 
 const ASSEMBLY_TYPES = [
   { value: 'box', label: 'Box' },
@@ -51,8 +51,11 @@ export default function AssemblyModal({ assembly, materials, hardware, onClose, 
   const [isOutsourced, setIsOutsourced] = useState(assembly?.is_outsourced ?? false);
   const [requiresFinish, setRequiresFinish] = useState(assembly?.requires_finish ?? false);
   const [requiresEdgeband, setRequiresEdgeband] = useState(assembly?.requires_edgeband ?? false);
+  const [panelType, setPanelType] = useState(assembly?.panel_type ?? 'flat');
+  const [frameJoinery, setFrameJoinery] = useState(assembly?.frame_joinery ?? 'cope_and_stick');
   const [finishLabor, setFinishLabor] = useState(assembly?.finish_labor_hours?.toString() ?? '');
   const [prepLabor, setPrepLabor] = useState(assembly?.prep_labor_hours?.toString() ?? '');
+  const [panelPrepLabor, setPanelPrepLabor] = useState(assembly?.panel_prep_labor_hours?.toString() ?? '');
   const [buildLabor, setBuildLabor] = useState(assembly?.build_labor_hours?.toString() ?? '');
   const [isDefault, setIsDefault] = useState(assembly?.is_default ?? false);
 
@@ -67,7 +70,7 @@ export default function AssemblyModal({ assembly, materials, hardware, onClose, 
     switch (type) {
       case 'box': return materialSelect(materials, ['box_core']);
       case 'door':
-      case 'drawer_front': return materialSelect(materials, ['door_frame', 'slab_sheet']);
+      case 'drawer_front': return materialSelect(materials, ['door_frame', 'slab_sheet', 'frame_lumber']);
       case 'drawer_box': return materialSelect(materials, ['drawer_side']);
       default: return [];
     }
@@ -81,10 +84,14 @@ export default function AssemblyModal({ assembly, materials, hardware, onClose, 
     }
   }, [type, materials]);
 
-  const panelOptions = useMemo(
-    () => (isDoor || isFront ? materialSelect(materials, ['door_panel']) : []),
-    [isDoor, isFront, materials],
-  );
+  const panelOptions = useMemo(() => {
+    if (!(isDoor || isFront)) return [];
+    switch (panelType) {
+      case 'raised_solid': return materialSelect(materials, ['frame_lumber', 'door_frame']);
+      case 'raised_sheet': return materialSelect(materials, ['slab_sheet']);
+      default: return materialSelect(materials, ['door_panel']);
+    }
+  }, [isDoor, isFront, panelType, materials]);
 
   const faceLumberOptions = useMemo(
     () => (isBox && style === 'face_frame' ? materialSelect(materials, ['frame_lumber']) : []),
@@ -114,7 +121,8 @@ export default function AssemblyModal({ assembly, materials, hardware, onClose, 
     const prep = parseFloat(prepLabor) || 0;
     const build = parseFloat(buildLabor) || 0;
     const finish = parseFloat(finishLabor) || 0;
-    if (prep < 0 || build < 0 || finish < 0) {
+    const panelPrep = parseFloat(panelPrepLabor) || 0;
+    if (prep < 0 || build < 0 || finish < 0 || panelPrep < 0) {
       setError('Labor hours must be non-negative.');
       return;
     }
@@ -137,8 +145,11 @@ export default function AssemblyModal({ assembly, materials, hardware, onClose, 
       is_outsourced: isOutsourced,
       requires_finish: requiresFinish,
       requires_edgeband: requiresEdgeband,
+      panel_type: isDoor || isFront ? panelType : 'flat',
+      frame_joinery: isDoor || isFront ? frameJoinery : 'cope_and_stick',
       finish_labor_hours: finish,
       prep_labor_hours: prep,
+      panel_prep_labor_hours: isDoor || isFront ? panelPrep : 0,
       build_labor_hours: build,
       is_default: isDefault,
       created_at: assembly?.created_at ?? '',
@@ -180,6 +191,9 @@ export default function AssemblyModal({ assembly, materials, hardware, onClose, 
                 setIsOutsourced(false);
                 setRequiresFinish(false);
                 setRequiresEdgeband(false);
+                setPanelType('flat');
+                setFrameJoinery('cope_and_stick');
+                setPanelPrepLabor('');
               }}
             >
               {ASSEMBLY_TYPES.map((t) => (
@@ -269,20 +283,77 @@ export default function AssemblyModal({ assembly, materials, hardware, onClose, 
             )}
 
             {(isDoor || isFront) && (
-              <div>
-                <label className={labelClass} htmlFor="assembly-panel">Panel Material (5-piece only)</label>
-                <select
-                  id="assembly-panel"
-                  className={inputClass}
-                  value={panelMaterialID}
-                  onChange={(e) => setPanelMaterialID(e.target.value)}
-                >
-                  <option value="">— Select —</option>
-                  {panelOptions.map((o) => (
-                    <option key={o.id} value={o.id}>{o.name}</option>
-                  ))}
-                </select>
-              </div>
+              <>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className={labelClass} htmlFor="assembly-panel-type">Panel Style</label>
+                    <select
+                      id="assembly-panel-type"
+                      className={inputClass}
+                      value={panelType}
+                      onChange={(e) => {
+                        setPanelType(e.target.value);
+                        setPanelMaterialID('');
+                      }}
+                    >
+                      {PANEL_TYPES.map((p) => (
+                        <option key={p.value} value={p.value}>{p.label}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className={labelClass} htmlFor="assembly-frame-joinery">Frame Joinery</label>
+                    <select
+                      id="assembly-frame-joinery"
+                      className={inputClass}
+                      value={frameJoinery}
+                      onChange={(e) => setFrameJoinery(e.target.value)}
+                    >
+                      {FRAME_JOINERY.map((j) => (
+                        <option key={j.value} value={j.value}>{j.label}</option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+
+                <div>
+                  <label className={labelClass} htmlFor="assembly-panel">
+                    {panelType === 'raised_solid'
+                      ? 'Solid Wood Panel Material'
+                      : panelType === 'raised_sheet'
+                        ? 'Raised Panel Material (3/4" sheet)'
+                        : 'Panel Material (1/4" sheet)'}
+                  </label>
+                  <select
+                    id="assembly-panel"
+                    className={inputClass}
+                    value={panelMaterialID}
+                    onChange={(e) => setPanelMaterialID(e.target.value)}
+                  >
+                    <option value="">— Select —</option>
+                    {panelOptions.map((o) => (
+                      <option key={o.id} value={o.id}>{o.name}</option>
+                    ))}
+                  </select>
+                </div>
+
+                {panelType === 'raised_solid' && (
+                  <div>
+                    <label className={labelClass} htmlFor="assembly-panel-prep">
+                      Panel Glue &amp; Clamp Labor (hrs / {laborUnit})
+                    </label>
+                    <input
+                      id="assembly-panel-prep"
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      className={inputClass}
+                      value={panelPrepLabor}
+                      onChange={(e) => setPanelPrepLabor(e.target.value)}
+                    />
+                  </div>
+                )}
+              </>
             )}
 
             {isBox && style === 'face_frame' && (

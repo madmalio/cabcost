@@ -27,6 +27,7 @@ import {
   SaveShopSettings,
   UpdateQuoteBuyout,
   UpdateQuoteCabinet,
+  UpdateQuoteStatus,
 } from '../wailsjs/go/main/App';
 import type {
   Assembly,
@@ -68,8 +69,9 @@ export const api = {
     drawerFrontAssemblyId: number,
     drawerBoxAssemblyId: number,
     isFinished: boolean,
+    edgeDetail: boolean,
   ): Promise<CabinetCostBreakdown> =>
-    CalculateCabinetCost(sku, boxAssemblyId, doorAssemblyId, drawerFrontAssemblyId, drawerBoxAssemblyId, isFinished),
+    CalculateCabinetCost(sku, boxAssemblyId, doorAssemblyId, drawerFrontAssemblyId, drawerBoxAssemblyId, isFinished, edgeDetail),
   calculateCabinetCostOverride: (
     sku: string,
     width: number,
@@ -80,14 +82,16 @@ export const api = {
     drawerFrontAssemblyId: number,
     drawerBoxAssemblyId: number,
     isFinished: boolean,
+    edgeDetail: boolean,
   ): Promise<CabinetCostBreakdown> =>
-    CalculateCabinetCostOverride(sku, width, height, depth, boxAssemblyId, doorAssemblyId, drawerFrontAssemblyId, drawerBoxAssemblyId, isFinished),
+    CalculateCabinetCostOverride(sku, width, height, depth, boxAssemblyId, doorAssemblyId, drawerFrontAssemblyId, drawerBoxAssemblyId, isFinished, edgeDetail),
 
   getQuotes: (): Promise<QuoteListItem[]> => GetQuotes(),
   getQuoteDetail: (quoteId: number): Promise<QuoteDetailResponse> => GetQuoteDetail(quoteId),
   saveQuote: (q: Quote): Promise<number> => SaveQuote(q),
   deleteQuote: (quoteId: number): Promise<void> => DeleteQuote(quoteId),
   duplicateQuote: (quoteId: number): Promise<number> => DuplicateQuote(quoteId),
+  updateQuoteStatus: (quoteId: number, status: string): Promise<void> => UpdateQuoteStatus(quoteId, status),
 
   addQuoteCabinet: (item: QuoteCabinet): Promise<void> => AddQuoteCabinet(item),
   updateQuoteCabinet: (item: QuoteCabinet): Promise<void> => UpdateQuoteCabinet(item),

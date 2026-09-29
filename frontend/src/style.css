@@ -40,18 +40,23 @@
   }
 }
 
+@page {
+  size: letter;
+  margin: 0.5in;
+}
+
 @media print {
   html,
   body,
-  #root,
-  main {
+  #root {
     background: #ffffff !important;
     height: auto !important;
     overflow: visible !important;
   }
-  main,
-  main * {
-    color: #18181b !important;
+  main {
+    background: #ffffff !important;
+    height: auto !important;
+    overflow: visible !important;
   }
   .print\:hidden {
     display: none !important;

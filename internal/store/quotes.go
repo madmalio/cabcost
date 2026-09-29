@@ -9,14 +9,14 @@ import (
 )
 
 const quoteCols = `id, job_name, client_name, client_phone, status, box_assembly_id, door_assembly_id,
-	drawer_front_assembly_id, drawer_assembly_id, is_finished, target_margin_percent, prefab_margin_percent, notes, created_at, updated_at`
+	drawer_front_assembly_id, drawer_assembly_id, is_finished, has_edge_detail, target_margin_percent, prefab_margin_percent, notes, created_at, updated_at`
 
 func scanQuote(r rowScanner) (models.Quote, error) {
 	var q models.Quote
 	err := r.Scan(
 		&q.ID, &q.JobName, &q.ClientName, &q.ClientPhone, &q.Status,
 		&q.BoxAssemblyID, &q.DoorAssemblyID, &q.DrawerFrontAssemblyID, &q.DrawerAssemblyID, &q.IsFinished,
-		&q.TargetMarginPercent, &q.PrefabMarginPercent, &q.Notes, &q.CreatedAt, &q.UpdatedAt,
+		&q.HasEdgeDetail, &q.TargetMarginPercent, &q.PrefabMarginPercent, &q.Notes, &q.CreatedAt, &q.UpdatedAt,
 	)
 	return q, err
 }
@@ -130,11 +130,11 @@ func (s *Store) SaveQuote(q models.Quote) (int64, error) {
 	if q.ID == 0 {
 		res, err := s.db.Exec(
 			`INSERT INTO quotes
-			 (job_name, client_name, client_phone, status, box_assembly_id, door_assembly_id, drawer_front_assembly_id, drawer_assembly_id, is_finished, target_margin_percent, prefab_margin_percent, notes)
-			 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+			 (job_name, client_name, client_phone, status, box_assembly_id, door_assembly_id, drawer_front_assembly_id, drawer_assembly_id, is_finished, has_edge_detail, target_margin_percent, prefab_margin_percent, notes)
+			 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
 			strings.TrimSpace(q.JobName), strings.TrimSpace(q.ClientName), strings.TrimSpace(q.ClientPhone), q.Status,
 			q.BoxAssemblyID, q.DoorAssemblyID, q.DrawerFrontAssemblyID, q.DrawerAssemblyID, q.IsFinished,
-			q.TargetMarginPercent, q.PrefabMarginPercent, q.Notes,
+			q.HasEdgeDetail, q.TargetMarginPercent, q.PrefabMarginPercent, q.Notes,
 		)
 		if err != nil {
 			return 0, fmt.Errorf("insert quote: %w", err)
@@ -150,16 +150,30 @@ func (s *Store) SaveQuote(q models.Quote) (int64, error) {
 		`UPDATE quotes SET
 		   job_name = ?, client_name = ?, client_phone = ?, status = ?,
 		   box_assembly_id = ?, door_assembly_id = ?, drawer_front_assembly_id = ?, drawer_assembly_id = ?, is_finished = ?,
-		   target_margin_percent = ?, prefab_margin_percent = ?, notes = ?, updated_at = CURRENT_TIMESTAMP
+		   has_edge_detail = ?, target_margin_percent = ?, prefab_margin_percent = ?, notes = ?, updated_at = CURRENT_TIMESTAMP
 		 WHERE id = ?`,
 		strings.TrimSpace(q.JobName), strings.TrimSpace(q.ClientName), strings.TrimSpace(q.ClientPhone), q.Status,
 		q.BoxAssemblyID, q.DoorAssemblyID, q.DrawerFrontAssemblyID, q.DrawerAssemblyID, q.IsFinished,
-		q.TargetMarginPercent, q.PrefabMarginPercent, q.Notes, q.ID,
+		q.HasEdgeDetail, q.TargetMarginPercent, q.PrefabMarginPercent, q.Notes, q.ID,
 	)
 	if err != nil {
 		return 0, fmt.Errorf("update quote: %w", err)
 	}
 	return q.ID, nil
+}
+
+// UpdateQuoteStatus changes a quote's status and bumps updated_at.
+func (s *Store) UpdateQuoteStatus(quoteID int64, status string) error {
+	if !slices.Contains(models.ValidQuoteStatuses, status) {
+		return fmt.Errorf("invalid quote status %q", status)
+	}
+	if _, err := s.db.Exec(
+		`UPDATE quotes SET status = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?`,
+		status, quoteID,
+	); err != nil {
+		return fmt.Errorf("update quote status: %w", err)
+	}
+	return nil
 }
 
 // DeleteQuote removes a quote and (via cascade) its line items.

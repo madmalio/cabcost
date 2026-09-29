@@ -38,6 +38,7 @@ export default function CostDrawer({ cabinet, boxes, doors, fronts, drawers, onC
   const [frontId, setFrontId] = useState(defaultID(fronts));
   const [drawerId, setDrawerId] = useState(defaultID(drawers));
   const [isFinished, setIsFinished] = useState(false);
+  const [edgeDetail, setEdgeDetail] = useState(false);
   const [breakdown, setBreakdown] = useState<CabinetCostBreakdown | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -46,14 +47,14 @@ export default function CostDrawer({ cabinet, boxes, doors, fronts, drawers, onC
     setLoading(true);
     setError('');
     try {
-      const b = await api.calculateCabinetCost(cabinet.sku, boxId, doorId, frontId, drawerId, isFinished);
+      const b = await api.calculateCabinetCost(cabinet.sku, boxId, doorId, frontId, drawerId, isFinished, edgeDetail);
       setBreakdown(b);
     } catch (err) {
       setError(String(err));
     } finally {
       setLoading(false);
     }
-  }, [cabinet.sku, boxId, doorId, frontId, drawerId, isFinished]);
+  }, [cabinet.sku, boxId, doorId, frontId, drawerId, isFinished, edgeDetail]);
 
   useEffect(() => {
     void calc();
@@ -142,6 +143,19 @@ export default function CostDrawer({ cabinet, boxes, doors, fronts, drawers, onC
                 Finished
               </button>
             </div>
+          </div>
+
+          <div className="flex items-center gap-2.5">
+            <input
+              type="checkbox"
+              id="cost-edge-detail"
+              className="h-4 w-4 rounded border-zinc-600 bg-zinc-800 accent-zinc-100"
+              checked={edgeDetail}
+              onChange={(e) => setEdgeDetail(e.target.checked)}
+            />
+            <label htmlFor="cost-edge-detail" className="cursor-pointer text-sm text-zinc-400">
+              Outside Edge Detail
+            </label>
           </div>
 
           {error && (

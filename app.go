@@ -177,24 +177,24 @@ func (a *App) DeleteCabinet(id int64) error {
 }
 
 // CalculateCabinetCost returns a full itemized cost breakdown for a cabinet
-// SKU given the selected box, door, drawer front, and drawer box assemblies
-// and finish state.
-func (a *App) CalculateCabinetCost(sku string, boxAssemblyID int64, doorAssemblyID int64, drawerFrontAssemblyID int64, drawerBoxAssemblyID int64, isFinished bool) (models.CabinetCostBreakdown, error) {
+// SKU given the selected box, door, drawer front, and drawer box assemblies,
+// finish state, and edge-detail flag.
+func (a *App) CalculateCabinetCost(sku string, boxAssemblyID int64, doorAssemblyID int64, drawerFrontAssemblyID int64, drawerBoxAssemblyID int64, isFinished bool, edgeDetail bool) (models.CabinetCostBreakdown, error) {
 	s, err := a.requireStore()
 	if err != nil {
 		return models.CabinetCostBreakdown{}, err
 	}
-	return s.CalculateCabinetCost(sku, boxAssemblyID, doorAssemblyID, drawerFrontAssemblyID, drawerBoxAssemblyID, isFinished)
+	return s.CalculateCabinetCost(sku, boxAssemblyID, doorAssemblyID, drawerFrontAssemblyID, drawerBoxAssemblyID, isFinished, edgeDetail)
 }
 
 // CalculateCabinetCostOverride is like CalculateCabinetCost but accepts width,
 // height, and depth overrides (0 means "use catalog dimension").
-func (a *App) CalculateCabinetCostOverride(sku string, width float64, height float64, depth float64, boxAssemblyID int64, doorAssemblyID int64, drawerFrontAssemblyID int64, drawerBoxAssemblyID int64, isFinished bool) (models.CabinetCostBreakdown, error) {
+func (a *App) CalculateCabinetCostOverride(sku string, width float64, height float64, depth float64, boxAssemblyID int64, doorAssemblyID int64, drawerFrontAssemblyID int64, drawerBoxAssemblyID int64, isFinished bool, edgeDetail bool) (models.CabinetCostBreakdown, error) {
 	s, err := a.requireStore()
 	if err != nil {
 		return models.CabinetCostBreakdown{}, err
 	}
-	return s.CalculateCabinetCostOverride(sku, width, height, depth, boxAssemblyID, doorAssemblyID, drawerFrontAssemblyID, drawerBoxAssemblyID, isFinished)
+	return s.CalculateCabinetCostOverride(sku, width, height, depth, boxAssemblyID, doorAssemblyID, drawerFrontAssemblyID, drawerBoxAssemblyID, isFinished, edgeDetail)
 }
 
 // GetQuotes returns the quote list.
@@ -222,6 +222,15 @@ func (a *App) SaveQuote(q models.Quote) (int64, error) {
 		return 0, err
 	}
 	return s.SaveQuote(q)
+}
+
+// UpdateQuoteStatus changes a quote's status.
+func (a *App) UpdateQuoteStatus(quoteID int64, status string) error {
+	s, err := a.requireStore()
+	if err != nil {
+		return err
+	}
+	return s.UpdateQuoteStatus(quoteID, status)
 }
 
 // DeleteQuote removes a quote.

@@ -6,9 +6,9 @@ export function AddQuoteBuyout(arg1:models.QuoteBuyout):Promise<void>;
 
 export function AddQuoteCabinet(arg1:models.QuoteCabinet):Promise<void>;
 
-export function CalculateCabinetCost(arg1:string,arg2:number,arg3:number,arg4:number,arg5:number,arg6:boolean):Promise<models.CabinetCostBreakdown>;
+export function CalculateCabinetCost(arg1:string,arg2:number,arg3:number,arg4:number,arg5:number,arg6:boolean,arg7:boolean):Promise<models.CabinetCostBreakdown>;
 
-export function CalculateCabinetCostOverride(arg1:string,arg2:number,arg3:number,arg4:number,arg5:number,arg6:number,arg7:number,arg8:number,arg9:boolean):Promise<models.CabinetCostBreakdown>;
+export function CalculateCabinetCostOverride(arg1:string,arg2:number,arg3:number,arg4:number,arg5:number,arg6:number,arg7:number,arg8:number,arg9:boolean,arg10:boolean):Promise<models.CabinetCostBreakdown>;
 
 export function DeleteAssembly(arg1:number):Promise<void>;
 
@@ -57,3 +57,5 @@ export function SaveShopSettings(arg1:models.ShopSettings):Promise<void>;
 export function UpdateQuoteBuyout(arg1:models.QuoteBuyout):Promise<void>;
 
 export function UpdateQuoteCabinet(arg1:models.QuoteCabinet):Promise<void>;
+
+export function UpdateQuoteStatus(arg1:number,arg2:string):Promise<void>;

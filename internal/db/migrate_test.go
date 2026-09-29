@@ -158,11 +158,12 @@ func TestMigrateExistingDB(t *testing.T) {
 	}
 
 	assertCount("door_front should be gone", `SELECT COUNT(*) FROM construction_assemblies WHERE type='door_front'`, 0)
-	assertCount("door profiles", `SELECT COUNT(*) FROM construction_assemblies WHERE type='door'`, 3)
-	assertCount("drawer front profiles", `SELECT COUNT(*) FROM construction_assemblies WHERE type='drawer_front'`, 3)
+	assertCount("door profiles", `SELECT COUNT(*) FROM construction_assemblies WHERE type='door'`, 6)
+	assertCount("drawer front profiles", `SELECT COUNT(*) FROM construction_assemblies WHERE type='drawer_front'`, 6)
 	assertCount("drawer box profiles", `SELECT COUNT(*) FROM construction_assemblies WHERE type='drawer_box'`, 3)
 	assertCount("5x5 material", `SELECT COUNT(*) FROM materials WHERE name='1/2" 5x5 9-Ply Russian Birch'`, 1)
 	assertCount("slab material", `SELECT COUNT(*) FROM materials WHERE name='3/4" MDF (Slab)'`, 1)
+	assertCount("alder material", `SELECT COUNT(*) FROM materials WHERE name='4/4 Superior Alder'`, 1)
 
 	var requiresFinish int
 	var hardwareID sql.NullInt64
@@ -179,5 +180,22 @@ func TestMigrateExistingDB(t *testing.T) {
 	}
 	if !frontID.Valid || frontID.Int64 == 0 {
 		t.Errorf("quote drawer_front_assembly_id not backfilled: %v", frontID)
+	}
+
+	var panelType, frameJoinery string
+	var panelPrep float64
+	if err := dbh.QueryRow(`SELECT panel_type, frame_joinery, panel_prep_labor_hours FROM construction_assemblies WHERE name='Stained Alder Raised Panel Door'`).Scan(&panelType, &frameJoinery, &panelPrep); err != nil {
+		t.Fatalf("raised panel row: %v", err)
+	}
+	if panelType != "raised_solid" || frameJoinery != "cope_and_stick" || panelPrep != 0.4 {
+		t.Errorf("stained alder raised panel: panel_type=%q frame_joinery=%q panel_prep=%v", panelType, frameJoinery, panelPrep)
+	}
+
+	var hasEdgeDetail bool
+	if err := dbh.QueryRow(`SELECT has_edge_detail FROM quotes WHERE job_name='Test Job'`).Scan(&hasEdgeDetail); err != nil {
+		t.Fatalf("quote has_edge_detail: %v", err)
+	}
+	if hasEdgeDetail {
+		t.Errorf("quote has_edge_detail should default to false, got %v", hasEdgeDetail)
 	}
 }

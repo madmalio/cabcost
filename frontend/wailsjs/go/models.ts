@@ -14,8 +14,11 @@ export namespace models {
 	    is_outsourced: boolean;
 	    requires_finish: boolean;
 	    requires_edgeband: boolean;
+	    panel_type: string;
+	    frame_joinery: string;
 	    finish_labor_hours: number;
 	    prep_labor_hours: number;
+	    panel_prep_labor_hours: number;
 	    build_labor_hours: number;
 	    is_default: boolean;
 	    created_at: string;
@@ -39,8 +42,11 @@ export namespace models {
 	        this.is_outsourced = source["is_outsourced"];
 	        this.requires_finish = source["requires_finish"];
 	        this.requires_edgeband = source["requires_edgeband"];
+	        this.panel_type = source["panel_type"];
+	        this.frame_joinery = source["frame_joinery"];
 	        this.finish_labor_hours = source["finish_labor_hours"];
 	        this.prep_labor_hours = source["prep_labor_hours"];
+	        this.panel_prep_labor_hours = source["panel_prep_labor_hours"];
 	        this.build_labor_hours = source["build_labor_hours"];
 	        this.is_default = source["is_default"];
 	        this.created_at = source["created_at"];
@@ -232,6 +238,7 @@ export namespace models {
 	    drawer_front_assembly_id: number;
 	    drawer_assembly_id: number;
 	    is_finished: boolean;
+	    has_edge_detail: boolean;
 	    target_margin_percent: number;
 	    prefab_margin_percent: number;
 	    notes: string;
@@ -254,6 +261,7 @@ export namespace models {
 	        this.drawer_front_assembly_id = source["drawer_front_assembly_id"];
 	        this.drawer_assembly_id = source["drawer_assembly_id"];
 	        this.is_finished = source["is_finished"];
+	        this.has_edge_detail = source["has_edge_detail"];
 	        this.target_margin_percent = source["target_margin_percent"];
 	        this.prefab_margin_percent = source["prefab_margin_percent"];
 	        this.notes = source["notes"];

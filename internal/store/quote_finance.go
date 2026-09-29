@@ -107,7 +107,7 @@ func (s *Store) quoteFinancialSummary(q models.Quote) (models.FinancialSummary, 
 		if item.CustomDepth != nil {
 			c.Depth = *item.CustomDepth
 		}
-		b, err := s.calculateCabinet(c, q.BoxAssemblyID, q.DoorAssemblyID, q.DrawerFrontAssemblyID, q.DrawerAssemblyID, q.IsFinished)
+		b, err := s.calculateCabinet(c, q.BoxAssemblyID, q.DoorAssemblyID, q.DrawerFrontAssemblyID, q.DrawerAssemblyID, q.IsFinished, q.HasEdgeDetail)
 		if err != nil {
 			return models.FinancialSummary{}, err
 		}
@@ -159,7 +159,7 @@ func (s *Store) buildCabinetLines(q models.Quote) ([]models.QuoteCabinetLine, er
 		if item.CustomDepth != nil {
 			c.Depth = *item.CustomDepth
 		}
-		b, err := s.calculateCabinet(c, q.BoxAssemblyID, q.DoorAssemblyID, q.DrawerFrontAssemblyID, q.DrawerAssemblyID, q.IsFinished)
+		b, err := s.calculateCabinet(c, q.BoxAssemblyID, q.DoorAssemblyID, q.DrawerFrontAssemblyID, q.DrawerAssemblyID, q.IsFinished, q.HasEdgeDetail)
 		if err != nil {
 			return nil, err
 		}
