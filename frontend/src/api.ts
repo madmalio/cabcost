@@ -64,6 +64,8 @@ export const api = {
   deleteCabinet: (id: number): Promise<void> => DeleteCabinet(id),
   calculateCabinetCost: (
     sku: string,
+    woodSpecies: string,
+    finishType: string,
     boxAssemblyId: number,
     doorAssemblyId: number,
     drawerFrontAssemblyId: number,
@@ -71,12 +73,14 @@ export const api = {
     isFinished: boolean,
     edgeDetail: boolean,
   ): Promise<CabinetCostBreakdown> =>
-    CalculateCabinetCost(sku, boxAssemblyId, doorAssemblyId, drawerFrontAssemblyId, drawerBoxAssemblyId, isFinished, edgeDetail),
+    CalculateCabinetCost(sku, woodSpecies, finishType, boxAssemblyId, doorAssemblyId, drawerFrontAssemblyId, drawerBoxAssemblyId, isFinished, edgeDetail),
   calculateCabinetCostOverride: (
     sku: string,
     width: number,
     height: number,
     depth: number,
+    woodSpecies: string,
+    finishType: string,
     boxAssemblyId: number,
     doorAssemblyId: number,
     drawerFrontAssemblyId: number,
@@ -84,7 +88,7 @@ export const api = {
     isFinished: boolean,
     edgeDetail: boolean,
   ): Promise<CabinetCostBreakdown> =>
-    CalculateCabinetCostOverride(sku, width, height, depth, boxAssemblyId, doorAssemblyId, drawerFrontAssemblyId, drawerBoxAssemblyId, isFinished, edgeDetail),
+    CalculateCabinetCostOverride(sku, width, height, depth, woodSpecies, finishType, boxAssemblyId, doorAssemblyId, drawerFrontAssemblyId, drawerBoxAssemblyId, isFinished, edgeDetail),
 
   getQuotes: (): Promise<QuoteListItem[]> => GetQuotes(),
   getQuoteDetail: (quoteId: number): Promise<QuoteDetailResponse> => GetQuoteDetail(quoteId),

@@ -1,5 +1,41 @@
 package models
 
+// Wood species values.
+const (
+	SpeciesPaintGrade = "paint_grade"
+	SpeciesAlder      = "alder"
+	SpeciesWhiteOak   = "white_oak"
+	SpeciesCherry     = "cherry"
+	SpeciesMaple      = "maple"
+	SpeciesWalnut     = "walnut"
+	SpeciesUniversal  = "universal"
+)
+
+// ValidSpecies lists every allowed wood species.
+var ValidSpecies = []string{
+	SpeciesPaintGrade,
+	SpeciesAlder,
+	SpeciesWhiteOak,
+	SpeciesCherry,
+	SpeciesMaple,
+	SpeciesWalnut,
+	SpeciesUniversal,
+}
+
+// Finish type values.
+const (
+	FinishPainted    = "painted"
+	FinishStained    = "stained"
+	FinishUnfinished = "unfinished"
+)
+
+// ValidFinishTypes lists every allowed finish type.
+var ValidFinishTypes = []string{
+	FinishPainted,
+	FinishStained,
+	FinishUnfinished,
+}
+
 // Material role values.
 const (
 	RoleBoxCore      = "box_core"
@@ -81,6 +117,7 @@ type Material struct {
 	ID           int64   `json:"id"`
 	Name         string  `json:"name"`
 	Role         string  `json:"role"`
+	Species      string  `json:"species"`
 	Unit         string  `json:"unit"`
 	UnitCost     float64 `json:"unit_cost"`
 	WastePercent float64 `json:"waste_percent"`
@@ -281,6 +318,8 @@ type Quote struct {
 	ClientName           string  `json:"client_name"`
 	ClientPhone          string  `json:"client_phone"`
 	Status               string  `json:"status"`
+	WoodSpecies          string  `json:"wood_species"`
+	FinishType           string  `json:"finish_type"`
 	BoxAssemblyID        int64   `json:"box_assembly_id"`
 	DoorAssemblyID       int64   `json:"door_assembly_id"`
 	DrawerFrontAssemblyID int64  `json:"drawer_front_assembly_id"`

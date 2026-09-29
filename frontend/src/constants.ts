@@ -2,6 +2,7 @@ export interface Material {
   id: number;
   name: string;
   role: string;
+  species: string;
   unit: string;
   unit_cost: number;
   waste_percent: number;
@@ -227,6 +228,8 @@ export interface Quote {
   client_name: string;
   client_phone: string;
   status: string;
+  wood_species: string;
+  finish_type: string;
   box_assembly_id: number;
   door_assembly_id: number;
   drawer_front_assembly_id: number;
@@ -352,4 +355,28 @@ export function buyoutCategoryBadge(category: string): string {
 export function retailFromCost(cost: number, marginPercent: number): number {
   if (marginPercent >= 100) return cost;
   return cost / (1 - marginPercent / 100);
+}
+
+export const WOOD_SPECIES: SelectOption[] = [
+  { value: 'paint_grade', label: 'Paint-Grade (MDF/Poplar)' },
+  { value: 'alder', label: 'Alder' },
+  { value: 'white_oak', label: 'White Oak' },
+  { value: 'cherry', label: 'Cherry' },
+  { value: 'maple', label: 'Maple' },
+  { value: 'walnut', label: 'Walnut' },
+  { value: 'universal', label: 'Universal / Core' },
+];
+
+export const FINISH_TYPES: SelectOption[] = [
+  { value: 'painted', label: 'Painted' },
+  { value: 'stained', label: 'Stained' },
+  { value: 'unfinished', label: 'Unfinished' },
+];
+
+export function speciesLabel(s: string): string {
+  return WOOD_SPECIES.find(o => o.value === s)?.label ?? s;
+}
+
+export function finishTypeLabel(s: string): string {
+  return FINISH_TYPES.find(o => o.value === s)?.label ?? s;
 }

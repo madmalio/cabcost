@@ -137,6 +137,61 @@ func (s *Store) defaultHardware(category string) (models.Hardware, bool, error) 
 	return h, true, nil
 }
 
+// resolveJobMaterial resolves the material based on the job's species and finish type.
+func (s *Store) resolveJobMaterial(role string, woodSpecies string, finishType string, panelType string) (models.Material, bool, error) {
+	var m models.Material
+	var err error
+	_ = m
+	_ = err
+	
+	queryMaterial := func(targetRole, targetSpecies string) (models.Material, bool, error) {
+		mat, e := scanMaterial(s.db.QueryRow(`SELECT `+materialCols+` FROM materials WHERE role = ? AND species = ? ORDER BY id LIMIT 1`, targetRole, targetSpecies))
+		if e == sql.ErrNoRows {
+			return models.Material{}, false, nil
+		}
+		if e != nil {
+			return models.Material{}, false, e
+		}
+		return mat, true, nil
+	}
+
+	queryFrames := func(targetSpecies string) (models.Material, bool, error) {
+		mat, e := scanMaterial(s.db.QueryRow(`SELECT `+materialCols+` FROM materials WHERE (role = ? OR role = ?) AND species = ? ORDER BY id LIMIT 1`, models.RoleDoorFrame, models.RoleFrameLumber, targetSpecies))
+		if e == sql.ErrNoRows {
+			return models.Material{}, false, nil
+		}
+		if e != nil {
+			return models.Material{}, false, e
+		}
+		return mat, true, nil
+	}
+
+	switch role {
+	case models.RoleFrameLumber:
+		speciesToUse := woodSpecies
+		if finishType == models.FinishPainted {
+			speciesToUse = models.SpeciesPaintGrade
+		}
+		return queryMaterial(models.RoleFrameLumber, speciesToUse)
+
+	case models.RoleDoorFrame:
+		return queryFrames(woodSpecies)
+
+	case models.RoleDoorPanel:
+		if panelType == models.PanelTypeFlat {
+			if finishType == models.FinishPainted {
+				return queryMaterial(models.RoleDoorPanel, models.SpeciesPaintGrade)
+			}
+			return queryMaterial(models.RoleDoorPanel, woodSpecies)
+		} else if panelType == models.PanelTypeRaisedSheet {
+			return queryMaterial(models.RoleSlabSheet, models.SpeciesPaintGrade)
+		} else if panelType == models.PanelTypeRaisedSolid {
+			return queryFrames(woodSpecies)
+		}
+	}
+	return models.Material{}, false, nil
+}
+
 func round2(v float64) float64 {
 	return math.Round(v*100) / 100
 }
@@ -204,17 +259,17 @@ func (s *Store) loadCabinet(sku string) (models.Cabinet, error) {
 // CalculateCabinetCost produces a full itemized cost breakdown for a catalog
 // SKU given the box, door, drawer front, and drawer box assemblies, finish
 // state, and edge-detail flag. Zero assembly IDs resolve to their type default.
-func (s *Store) CalculateCabinetCost(sku string, boxAssemblyID, doorAssemblyID, drawerFrontAssemblyID, drawerBoxAssemblyID int64, isFinished, edgeDetail bool) (models.CabinetCostBreakdown, error) {
+func (s *Store) CalculateCabinetCost(sku string, woodSpecies string, finishType string, boxAssemblyID, doorAssemblyID, drawerFrontAssemblyID, drawerBoxAssemblyID int64, isFinished, edgeDetail bool) (models.CabinetCostBreakdown, error) {
 	c, err := s.loadCabinet(sku)
 	if err != nil {
 		return models.CabinetCostBreakdown{}, err
 	}
-	return s.calculateCabinet(c, boxAssemblyID, doorAssemblyID, drawerFrontAssemblyID, drawerBoxAssemblyID, isFinished, edgeDetail)
+	return s.calculateCabinet(c, woodSpecies, finishType, boxAssemblyID, doorAssemblyID, drawerFrontAssemblyID, drawerBoxAssemblyID, isFinished, edgeDetail)
 }
 
 // CalculateCabinetCostOverride is like CalculateCabinetCost but lets width,
 // height, and depth override the catalog dimensions (0 means "use catalog").
-func (s *Store) CalculateCabinetCostOverride(sku string, width, height, depth float64, boxAssemblyID, doorAssemblyID, drawerFrontAssemblyID, drawerBoxAssemblyID int64, isFinished, edgeDetail bool) (models.CabinetCostBreakdown, error) {
+func (s *Store) CalculateCabinetCostOverride(sku string, width, height, depth float64, woodSpecies string, finishType string, boxAssemblyID, doorAssemblyID, drawerFrontAssemblyID, drawerBoxAssemblyID int64, isFinished, edgeDetail bool) (models.CabinetCostBreakdown, error) {
 	c, err := s.loadCabinet(sku)
 	if err != nil {
 		return models.CabinetCostBreakdown{}, err
@@ -228,11 +283,11 @@ func (s *Store) CalculateCabinetCostOverride(sku string, width, height, depth fl
 	if depth > 0 {
 		c.Depth = depth
 	}
-	return s.calculateCabinet(c, boxAssemblyID, doorAssemblyID, drawerFrontAssemblyID, drawerBoxAssemblyID, isFinished, edgeDetail)
+	return s.calculateCabinet(c, woodSpecies, finishType, boxAssemblyID, doorAssemblyID, drawerFrontAssemblyID, drawerBoxAssemblyID, isFinished, edgeDetail)
 }
 
 // calculateCabinet is the shared core of the parametric cost engine.
-func (s *Store) calculateCabinet(c models.Cabinet, boxAssemblyID, doorAssemblyID, drawerFrontAssemblyID, drawerBoxAssemblyID int64, isFinished, edgeDetail bool) (models.CabinetCostBreakdown, error) {
+func (s *Store) calculateCabinet(c models.Cabinet, woodSpecies string, finishType string, boxAssemblyID, doorAssemblyID, drawerFrontAssemblyID, drawerBoxAssemblyID int64, isFinished, edgeDetail bool) (models.CabinetCostBreakdown, error) {
 	box, err := s.assemblyByIDOrDefault(boxAssemblyID, models.AssemblyTypeBox)
 	if err != nil {
 		return models.CabinetCostBreakdown{}, fmt.Errorf("resolve box assembly: %w", err)
@@ -263,7 +318,10 @@ func (s *Store) calculateCabinet(c models.Cabinet, boxAssemblyID, doorAssemblyID
 	if err != nil {
 		return models.CabinetCostBreakdown{}, err
 	}
-	faceMat, _, err := s.materialByID(box.FaceLumberID)
+	faceMat, _, err := s.resolveJobMaterial(models.RoleFrameLumber, woodSpecies, finishType, "")
+	if faceMat.ID == 0 {
+		faceMat, _, err = s.materialByID(box.FaceLumberID)
+	}
 	if err != nil {
 		return models.CabinetCostBreakdown{}, err
 	}
@@ -271,19 +329,31 @@ func (s *Store) calculateCabinet(c models.Cabinet, boxAssemblyID, doorAssemblyID
 	if err != nil {
 		return models.CabinetCostBreakdown{}, err
 	}
-	doorFrameMat, _, err := s.materialByID(door.CoreMaterialID)
+	doorFrameMat, _, err := s.resolveJobMaterial(models.RoleDoorFrame, woodSpecies, finishType, "")
+	if doorFrameMat.ID == 0 {
+		doorFrameMat, _, err = s.materialByID(door.CoreMaterialID)
+	}
 	if err != nil {
 		return models.CabinetCostBreakdown{}, err
 	}
-	doorPanelMat, _, err := s.materialByID(door.PanelMaterialID)
+	doorPanelMat, _, err := s.resolveJobMaterial(models.RoleDoorPanel, woodSpecies, finishType, door.PanelType)
+	if doorPanelMat.ID == 0 {
+		doorPanelMat, _, err = s.materialByID(door.PanelMaterialID)
+	}
 	if err != nil {
 		return models.CabinetCostBreakdown{}, err
 	}
-	frontFrameMat, _, err := s.materialByID(drawerFront.CoreMaterialID)
+	frontFrameMat, _, err := s.resolveJobMaterial(models.RoleDoorFrame, woodSpecies, finishType, "")
+	if frontFrameMat.ID == 0 {
+		frontFrameMat, _, err = s.materialByID(drawerFront.CoreMaterialID)
+	}
 	if err != nil {
 		return models.CabinetCostBreakdown{}, err
 	}
-	frontPanelMat, _, err := s.materialByID(drawerFront.PanelMaterialID)
+	frontPanelMat, _, err := s.resolveJobMaterial(models.RoleDoorPanel, woodSpecies, finishType, drawerFront.PanelType)
+	if frontPanelMat.ID == 0 {
+		frontPanelMat, _, err = s.materialByID(drawerFront.PanelMaterialID)
+	}
 	if err != nil {
 		return models.CabinetCostBreakdown{}, err
 	}

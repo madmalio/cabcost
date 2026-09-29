@@ -121,6 +121,8 @@ export default function QuoteWorkbench({ quoteId, onBack, onDuplicate }: QuoteWo
             c.custom_width ?? 0,
             c.custom_height ?? 0,
             c.custom_depth ?? 0,
+            quote.wood_species,
+            quote.finish_type,
             quote.box_assembly_id,
             quote.door_assembly_id,
             quote.drawer_front_assembly_id,
@@ -176,7 +178,7 @@ export default function QuoteWorkbench({ quoteId, onBack, onDuplicate }: QuoteWo
     return () => {
       cancelled = true;
     };
-  }, [quote?.box_assembly_id, quote?.door_assembly_id, quote?.drawer_front_assembly_id, quote?.drawer_assembly_id, quote?.is_finished, quote?.has_edge_detail, quote?.target_margin_percent, cabinets, buyouts]);
+  }, [quote?.box_assembly_id, quote?.door_assembly_id, quote?.drawer_front_assembly_id, quote?.drawer_assembly_id, quote?.wood_species, quote?.finish_type, quote?.is_finished, quote?.has_edge_detail, quote?.target_margin_percent, cabinets, buyouts]);
 
   const patchQuote = (patch: Partial<Quote>) => {
     setQuote((q) => (q ? { ...q, ...patch } : q));

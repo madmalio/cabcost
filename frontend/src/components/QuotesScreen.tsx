@@ -64,6 +64,8 @@ export default function QuotesScreen() {
         client_name: '',
         client_phone: '',
         status: 'draft',
+      wood_species: 'paint_grade',
+      finish_type: 'painted',
         box_assembly_id: defaultAssemblyID(boxes),
         door_assembly_id: defaultAssemblyID(doors),
         drawer_front_assembly_id: defaultAssemblyID(fronts),

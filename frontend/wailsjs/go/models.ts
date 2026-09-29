@@ -207,6 +207,7 @@ export namespace models {
 	    id: number;
 	    name: string;
 	    role: string;
+	    species: string;
 	    unit: string;
 	    unit_cost: number;
 	    waste_percent: number;
@@ -221,6 +222,7 @@ export namespace models {
 	        this.id = source["id"];
 	        this.name = source["name"];
 	        this.role = source["role"];
+	        this.species = source["species"];
 	        this.unit = source["unit"];
 	        this.unit_cost = source["unit_cost"];
 	        this.waste_percent = source["waste_percent"];
@@ -233,6 +235,8 @@ export namespace models {
 	    client_name: string;
 	    client_phone: string;
 	    status: string;
+	    wood_species: string;
+	    finish_type: string;
 	    box_assembly_id: number;
 	    door_assembly_id: number;
 	    drawer_front_assembly_id: number;
@@ -256,6 +260,8 @@ export namespace models {
 	        this.client_name = source["client_name"];
 	        this.client_phone = source["client_phone"];
 	        this.status = source["status"];
+	        this.wood_species = source["wood_species"];
+	        this.finish_type = source["finish_type"];
 	        this.box_assembly_id = source["box_assembly_id"];
 	        this.door_assembly_id = source["door_assembly_id"];
 	        this.drawer_front_assembly_id = source["drawer_front_assembly_id"];

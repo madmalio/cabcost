@@ -179,22 +179,22 @@ func (a *App) DeleteCabinet(id int64) error {
 // CalculateCabinetCost returns a full itemized cost breakdown for a cabinet
 // SKU given the selected box, door, drawer front, and drawer box assemblies,
 // finish state, and edge-detail flag.
-func (a *App) CalculateCabinetCost(sku string, boxAssemblyID int64, doorAssemblyID int64, drawerFrontAssemblyID int64, drawerBoxAssemblyID int64, isFinished bool, edgeDetail bool) (models.CabinetCostBreakdown, error) {
+func (a *App) CalculateCabinetCost(sku string, woodSpecies string, finishType string, boxAssemblyID int64, doorAssemblyID int64, drawerFrontAssemblyID int64, drawerBoxAssemblyID int64, isFinished bool, edgeDetail bool) (models.CabinetCostBreakdown, error) {
 	s, err := a.requireStore()
 	if err != nil {
 		return models.CabinetCostBreakdown{}, err
 	}
-	return s.CalculateCabinetCost(sku, boxAssemblyID, doorAssemblyID, drawerFrontAssemblyID, drawerBoxAssemblyID, isFinished, edgeDetail)
+	return s.CalculateCabinetCost(sku, woodSpecies, finishType, boxAssemblyID, doorAssemblyID, drawerFrontAssemblyID, drawerBoxAssemblyID, isFinished, edgeDetail)
 }
 
 // CalculateCabinetCostOverride is like CalculateCabinetCost but accepts width,
 // height, and depth overrides (0 means "use catalog dimension").
-func (a *App) CalculateCabinetCostOverride(sku string, width float64, height float64, depth float64, boxAssemblyID int64, doorAssemblyID int64, drawerFrontAssemblyID int64, drawerBoxAssemblyID int64, isFinished bool, edgeDetail bool) (models.CabinetCostBreakdown, error) {
+func (a *App) CalculateCabinetCostOverride(sku string, width float64, height float64, depth float64, woodSpecies string, finishType string, boxAssemblyID int64, doorAssemblyID int64, drawerFrontAssemblyID int64, drawerBoxAssemblyID int64, isFinished bool, edgeDetail bool) (models.CabinetCostBreakdown, error) {
 	s, err := a.requireStore()
 	if err != nil {
 		return models.CabinetCostBreakdown{}, err
 	}
-	return s.CalculateCabinetCostOverride(sku, width, height, depth, boxAssemblyID, doorAssemblyID, drawerFrontAssemblyID, drawerBoxAssemblyID, isFinished, edgeDetail)
+	return s.CalculateCabinetCostOverride(sku, width, height, depth, woodSpecies, finishType, boxAssemblyID, doorAssemblyID, drawerFrontAssemblyID, drawerBoxAssemblyID, isFinished, edgeDetail)
 }
 
 // GetQuotes returns the quote list.

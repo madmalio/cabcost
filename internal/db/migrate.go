@@ -228,3 +228,14 @@ func migrateDataV4(database *sql.DB) error {
 
 	return nil
 }
+
+func migrateDataV5(database *sql.DB) error {
+	// Clean up old assemblies and add new simplified ones.
+	if _, err := database.Exec(`DELETE FROM construction_assemblies`); err != nil {
+		return err
+	}
+	if err := seedAssemblies(database); err != nil {
+		return err
+	}
+	return nil
+}

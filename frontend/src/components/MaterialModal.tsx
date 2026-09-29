@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import Modal from './Modal';
 import { inputClass, labelClass, primaryButtonClass, secondaryButtonClass } from './ui';
-import { MATERIAL_ROLES, MATERIAL_UNITS } from '../constants';
+import { MATERIAL_ROLES, MATERIAL_UNITS, WOOD_SPECIES } from '../constants';
 import type { Material } from '../constants';
 
 interface MaterialModalProps {
@@ -13,6 +13,7 @@ interface MaterialModalProps {
 export default function MaterialModal({ material, onClose, onSave }: MaterialModalProps) {
   const [name, setName] = useState(material?.name ?? '');
   const [role, setRole] = useState(material?.role ?? 'box_core');
+  const [species, setSpecies] = useState(material?.species ?? 'paint_grade');
   const [unit, setUnit] = useState(material?.unit ?? 'sheet_4x8');
   const [unitCost, setUnitCost] = useState(material?.unit_cost.toString() ?? '0');
   const [waste, setWaste] = useState(material?.waste_percent.toString() ?? '15');
@@ -38,6 +39,7 @@ export default function MaterialModal({ material, onClose, onSave }: MaterialMod
       id: material?.id ?? 0,
       name: name.trim(),
       role,
+      species,
       unit,
       unit_cost: cost,
       waste_percent: wastePct,

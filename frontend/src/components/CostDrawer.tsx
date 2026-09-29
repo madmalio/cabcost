@@ -47,7 +47,7 @@ export default function CostDrawer({ cabinet, boxes, doors, fronts, drawers, onC
     setLoading(true);
     setError('');
     try {
-      const b = await api.calculateCabinetCost(cabinet.sku, boxId, doorId, frontId, drawerId, isFinished, edgeDetail);
+      const b = await api.calculateCabinetCost(cabinet.sku, 'paint_grade', 'painted', boxId, doorId, frontId, drawerId, isFinished, edgeDetail);
       setBreakdown(b);
     } catch (err) {
       setError(String(err));
