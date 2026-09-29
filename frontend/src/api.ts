@@ -1,0 +1,101 @@
+import {
+  AddQuoteBuyout,
+  AddQuoteCabinet,
+  CalculateCabinetCost,
+  CalculateCabinetCostOverride,
+  DeleteAssembly,
+  DeleteCabinet,
+  DeleteHardware,
+  DeleteMaterial,
+  DeleteQuote,
+  DeleteQuoteBuyout,
+  DeleteQuoteCabinet,
+  DuplicateQuote,
+  GetAssemblies,
+  GetCabinetCatalog,
+  GetHardware,
+  GetMaterials,
+  GetQuoteDetail,
+  GetQuotes,
+  GetShopSettings,
+  PrintQuote,
+  SaveAssembly,
+  SaveCabinet,
+  SaveHardware,
+  SaveMaterial,
+  SaveQuote,
+  SaveShopSettings,
+  UpdateQuoteBuyout,
+  UpdateQuoteCabinet,
+} from '../wailsjs/go/main/App';
+import type {
+  Assembly,
+  Cabinet,
+  CabinetCostBreakdown,
+  Hardware,
+  Material,
+  Quote,
+  QuoteBuyout,
+  QuoteCabinet,
+  QuoteDetailResponse,
+  QuoteListItem,
+  ShopSettings,
+} from './constants';
+
+export const api = {
+  getMaterials: (): Promise<Material[]> => GetMaterials(),
+  saveMaterial: (m: Material): Promise<void> => SaveMaterial(m),
+  deleteMaterial: (id: number): Promise<void> => DeleteMaterial(id),
+
+  getHardware: (): Promise<Hardware[]> => GetHardware(),
+  saveHardware: (h: Hardware): Promise<void> => SaveHardware(h),
+  deleteHardware: (id: number): Promise<void> => DeleteHardware(id),
+
+  getShopSettings: (): Promise<ShopSettings> => GetShopSettings(),
+  saveShopSettings: (s: ShopSettings): Promise<void> => SaveShopSettings(s),
+
+  getAssemblies: (assemblyType: string): Promise<Assembly[]> => GetAssemblies(assemblyType),
+  saveAssembly: (a: Assembly): Promise<void> => SaveAssembly(a),
+  deleteAssembly: (id: number): Promise<void> => DeleteAssembly(id),
+
+  getCabinetCatalog: (): Promise<Cabinet[]> => GetCabinetCatalog(),
+  saveCabinet: (c: Cabinet): Promise<void> => SaveCabinet(c),
+  deleteCabinet: (id: number): Promise<void> => DeleteCabinet(id),
+  calculateCabinetCost: (
+    sku: string,
+    boxAssemblyId: number,
+    doorAssemblyId: number,
+    drawerFrontAssemblyId: number,
+    drawerBoxAssemblyId: number,
+    isFinished: boolean,
+  ): Promise<CabinetCostBreakdown> =>
+    CalculateCabinetCost(sku, boxAssemblyId, doorAssemblyId, drawerFrontAssemblyId, drawerBoxAssemblyId, isFinished),
+  calculateCabinetCostOverride: (
+    sku: string,
+    width: number,
+    height: number,
+    depth: number,
+    boxAssemblyId: number,
+    doorAssemblyId: number,
+    drawerFrontAssemblyId: number,
+    drawerBoxAssemblyId: number,
+    isFinished: boolean,
+  ): Promise<CabinetCostBreakdown> =>
+    CalculateCabinetCostOverride(sku, width, height, depth, boxAssemblyId, doorAssemblyId, drawerFrontAssemblyId, drawerBoxAssemblyId, isFinished),
+
+  getQuotes: (): Promise<QuoteListItem[]> => GetQuotes(),
+  getQuoteDetail: (quoteId: number): Promise<QuoteDetailResponse> => GetQuoteDetail(quoteId),
+  saveQuote: (q: Quote): Promise<number> => SaveQuote(q),
+  deleteQuote: (quoteId: number): Promise<void> => DeleteQuote(quoteId),
+  duplicateQuote: (quoteId: number): Promise<number> => DuplicateQuote(quoteId),
+
+  addQuoteCabinet: (item: QuoteCabinet): Promise<void> => AddQuoteCabinet(item),
+  updateQuoteCabinet: (item: QuoteCabinet): Promise<void> => UpdateQuoteCabinet(item),
+  deleteQuoteCabinet: (id: number): Promise<void> => DeleteQuoteCabinet(id),
+
+  addQuoteBuyout: (item: QuoteBuyout): Promise<void> => AddQuoteBuyout(item),
+  updateQuoteBuyout: (item: QuoteBuyout): Promise<void> => UpdateQuoteBuyout(item),
+  deleteQuoteBuyout: (id: number): Promise<void> => DeleteQuoteBuyout(id),
+
+  printQuote: (): Promise<void> => PrintQuote(),
+};
