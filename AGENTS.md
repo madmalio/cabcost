@@ -10,6 +10,11 @@ cabinet "Hero SKUs" against user-defined **materials**, **hardware**,
 **shop settings**, then rolls them into **job quotes** with a gross-margin
 retail price.
 
+## Strict Agent Tooling Rules
+
+- **NO helper scripts:** DO NOT write or execute throwaway scripts (`.py`, `.ps1`, `.sh`, `.bat`, etc.) to modify files. Inspect and edit the source files directly using native read/write/replace file tools.
+- **NO background delegated sub-agents:** Perform work directly in the active session unless absolutely necessary for unrelated research.
+
 ## Stack
 
 - **Go** `1.26` (see `go.mod`) — backend + parametric cost engine
@@ -64,7 +69,7 @@ frontend/src/
 Tables: `materials`, `hardware`, `shop_settings`, `construction_assemblies`,
 `cabinet_catalog`, `quotes`, `quote_cabinets`, `quote_buyouts`.
 
-- Material **roles**: `box_core`, `box_back`, `frame_lumber`, `door_frame`,
+- Material **roles**: `box_core`, `box_back`, `lumber`,
   `door_panel`, `slab_sheet`, `drawer_side`, `drawer_bottom`, `edgeband`, `finishing`.
 - Material **units**: `sheet_4x8` (32 sq ft), `sheet_5x5` (25 sq ft), `board_foot`,
   `linear_foot`, `sq_ft`, `each`. `sheetCost()` in `cost.go` handles the ÷32/÷25 split.
@@ -77,10 +82,11 @@ Tables: `materials`, `hardware`, `shop_settings`, `construction_assemblies`,
   **frame_joinery**: `cope_and_stick`, `mitered`, `slab`. Mitered frames carry
   extra `build_labor_hours`; raised-solid panels add `panel_prep_labor_hours`
   (jointing/glue-up/clamping/wide-belt). The panel material's role follows the
-  panel type (`door_panel` / `slab_sheet` / `frame_lumber`|`door_frame`).
+  panel type (`door_panel` / `slab_sheet` / `lumber`).
 - Quote header references `box_assembly_id`, `door_assembly_id`,
   `drawer_front_assembly_id`, `drawer_assembly_id`, and `has_edge_detail` (adds
   project-wide perimeter routing + detail-sanding labor to all doors/fronts).
+  Quotes also specify **`wood_species`** and **`finish_type`** project-wide, which dynamically resolve the `lumber` materials used in doors/fronts during cost calculation.
 
 ## Database location & migrations
 
