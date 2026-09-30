@@ -179,7 +179,7 @@ func migrateDataV3(database *sql.DB) error {
 // (guarded by user_version). Existing rows already receive the new columns'
 // defaults (flat / cope_and_stick / 0.0) via ALTER TABLE ADD COLUMN.
 func migrateDataV4(database *sql.DB) error {
-	if err := ensureMaterial(database, `4/4 Superior Alder`, models.RoleFrameLumber, models.UnitBoardFoot, 5.50, 25.0); err != nil {
+	if err := ensureMaterial(database, `4/4 Superior Alder`, models.RoleLumber, models.UnitBoardFoot, 5.50, 25.0); err != nil {
 		return err
 	}
 
@@ -230,6 +230,10 @@ func migrateDataV4(database *sql.DB) error {
 }
 
 func migrateDataV5(database *sql.DB) error {
+	if _, err := database.Exec(`UPDATE materials SET role = 'lumber' WHERE role IN ('frame_lumber', 'door_frame')`); err != nil {
+		return fmt.Errorf("update materials role: %w", err)
+	}
+
 	// Clean up old assemblies and add new simplified ones.
 	if _, err := database.Exec(`DELETE FROM construction_assemblies`); err != nil {
 		return err

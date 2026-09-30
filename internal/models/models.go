@@ -40,8 +40,7 @@ var ValidFinishTypes = []string{
 const (
 	RoleBoxCore      = "box_core"
 	RoleBoxBack      = "box_back"
-	RoleFrameLumber  = "frame_lumber"
-	RoleDoorFrame    = "door_frame"
+	RoleLumber       = "lumber"
 	RoleDoorPanel    = "door_panel"
 	RoleSlabSheet    = "slab_sheet"
 	RoleDrawerSide   = "drawer_side"
@@ -54,8 +53,7 @@ const (
 var ValidRoles = []string{
 	RoleBoxCore,
 	RoleBoxBack,
-	RoleFrameLumber,
-	RoleDoorFrame,
+	RoleLumber,
 	RoleDoorPanel,
 	RoleSlabSheet,
 	RoleDrawerSide,

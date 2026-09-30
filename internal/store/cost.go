@@ -101,6 +101,17 @@ func (s *Store) materialByRole(role string) (models.Material, bool, error) {
 	return m, true, nil
 }
 
+func (s *Store) materialByRoleAndSpecies(role, species string) (models.Material, bool, error) {
+	m, err := scanMaterial(s.db.QueryRow(`SELECT `+materialCols+` FROM materials WHERE role = ? AND species = ? ORDER BY id LIMIT 1`, role, species))
+	if err == sql.ErrNoRows {
+		return models.Material{}, false, nil
+	}
+	if err != nil {
+		return models.Material{}, false, err
+	}
+	return m, true, nil
+}
+
 func (s *Store) hardwareByID(id *int64) (models.Hardware, bool, error) {
 	if id == nil || *id == 0 {
 		return models.Hardware{}, false, nil
@@ -137,59 +148,30 @@ func (s *Store) defaultHardware(category string) (models.Hardware, bool, error) 
 	return h, true, nil
 }
 
-// resolveJobMaterial resolves the material based on the job's species and finish type.
-func (s *Store) resolveJobMaterial(role string, woodSpecies string, finishType string, panelType string) (models.Material, bool, error) {
+func (s *Store) getLumber(woodSpecies, finishType string) (models.Material, bool, error) {
+	targetSpecies := woodSpecies
+	if finishType == models.FinishPainted {
+		targetSpecies = models.SpeciesPaintGrade
+	}
 	var m models.Material
-	var err error
-	_ = m
-	_ = err
-	
-	queryMaterial := func(targetRole, targetSpecies string) (models.Material, bool, error) {
-		mat, e := scanMaterial(s.db.QueryRow(`SELECT `+materialCols+` FROM materials WHERE role = ? AND species = ? ORDER BY id LIMIT 1`, targetRole, targetSpecies))
-		if e == sql.ErrNoRows {
-			return models.Material{}, false, nil
-		}
-		if e != nil {
-			return models.Material{}, false, e
-		}
-		return mat, true, nil
+	err := s.db.QueryRow(
+		`SELECT `+materialCols+` FROM materials WHERE role = 'lumber' AND species = ? ORDER BY id LIMIT 1`,
+		targetSpecies,
+	).Scan(&m.ID, &m.Name, &m.Role, &m.Species, &m.Unit, &m.UnitCost, &m.WastePercent, &m.CreatedAt)
+	if err == sql.ErrNoRows {
+		// Fallback to paint grade if specific hardwood lumber is missing
+		err = s.db.QueryRow(
+			`SELECT `+materialCols+` FROM materials WHERE role = 'lumber' AND species = ? ORDER BY id LIMIT 1`,
+			models.SpeciesPaintGrade,
+		).Scan(&m.ID, &m.Name, &m.Role, &m.Species, &m.Unit, &m.UnitCost, &m.WastePercent, &m.CreatedAt)
 	}
-
-	queryFrames := func(targetSpecies string) (models.Material, bool, error) {
-		mat, e := scanMaterial(s.db.QueryRow(`SELECT `+materialCols+` FROM materials WHERE (role = ? OR role = ?) AND species = ? ORDER BY id LIMIT 1`, models.RoleDoorFrame, models.RoleFrameLumber, targetSpecies))
-		if e == sql.ErrNoRows {
-			return models.Material{}, false, nil
-		}
-		if e != nil {
-			return models.Material{}, false, e
-		}
-		return mat, true, nil
+	if err == sql.ErrNoRows {
+		return models.Material{}, false, nil
 	}
-
-	switch role {
-	case models.RoleFrameLumber:
-		speciesToUse := woodSpecies
-		if finishType == models.FinishPainted {
-			speciesToUse = models.SpeciesPaintGrade
-		}
-		return queryMaterial(models.RoleFrameLumber, speciesToUse)
-
-	case models.RoleDoorFrame:
-		return queryFrames(woodSpecies)
-
-	case models.RoleDoorPanel:
-		if panelType == models.PanelTypeFlat {
-			if finishType == models.FinishPainted {
-				return queryMaterial(models.RoleDoorPanel, models.SpeciesPaintGrade)
-			}
-			return queryMaterial(models.RoleDoorPanel, woodSpecies)
-		} else if panelType == models.PanelTypeRaisedSheet {
-			return queryMaterial(models.RoleSlabSheet, models.SpeciesPaintGrade)
-		} else if panelType == models.PanelTypeRaisedSolid {
-			return queryFrames(woodSpecies)
-		}
+	if err != nil {
+		return models.Material{}, false, err
 	}
-	return models.Material{}, false, nil
+	return m, true, nil
 }
 
 func round2(v float64) float64 {
@@ -318,10 +300,7 @@ func (s *Store) calculateCabinet(c models.Cabinet, woodSpecies string, finishTyp
 	if err != nil {
 		return models.CabinetCostBreakdown{}, err
 	}
-	faceMat, _, err := s.resolveJobMaterial(models.RoleFrameLumber, woodSpecies, finishType, "")
-	if faceMat.ID == 0 {
-		faceMat, _, err = s.materialByID(box.FaceLumberID)
-	}
+	faceMat, _, err := s.getLumber(woodSpecies, finishType)
 	if err != nil {
 		return models.CabinetCostBreakdown{}, err
 	}
@@ -329,30 +308,40 @@ func (s *Store) calculateCabinet(c models.Cabinet, woodSpecies string, finishTyp
 	if err != nil {
 		return models.CabinetCostBreakdown{}, err
 	}
-	doorFrameMat, _, err := s.resolveJobMaterial(models.RoleDoorFrame, woodSpecies, finishType, "")
-	if doorFrameMat.ID == 0 {
-		doorFrameMat, _, err = s.materialByID(door.CoreMaterialID)
+	doorFrameMat, _, err := s.getLumber(woodSpecies, finishType)
+	if err != nil {
+		return models.CabinetCostBreakdown{}, err
+	}
+	var doorPanelMat models.Material
+	if door.PanelType == models.PanelTypeFlat {
+		tSpecies := woodSpecies
+		if finishType == models.FinishPainted {
+			tSpecies = models.SpeciesPaintGrade
+		}
+		doorPanelMat, _, err = s.materialByRoleAndSpecies(models.RoleDoorPanel, tSpecies)
+	} else if door.PanelType == models.PanelTypeRaisedSheet {
+		doorPanelMat, _, err = s.materialByRoleAndSpecies(models.RoleSlabSheet, models.SpeciesPaintGrade)
+	} else if door.PanelType == models.PanelTypeRaisedSolid {
+		doorPanelMat = doorFrameMat
 	}
 	if err != nil {
 		return models.CabinetCostBreakdown{}, err
 	}
-	doorPanelMat, _, err := s.resolveJobMaterial(models.RoleDoorPanel, woodSpecies, finishType, door.PanelType)
-	if doorPanelMat.ID == 0 {
-		doorPanelMat, _, err = s.materialByID(door.PanelMaterialID)
-	}
+	frontFrameMat, _, err := s.getLumber(woodSpecies, finishType)
 	if err != nil {
 		return models.CabinetCostBreakdown{}, err
 	}
-	frontFrameMat, _, err := s.resolveJobMaterial(models.RoleDoorFrame, woodSpecies, finishType, "")
-	if frontFrameMat.ID == 0 {
-		frontFrameMat, _, err = s.materialByID(drawerFront.CoreMaterialID)
-	}
-	if err != nil {
-		return models.CabinetCostBreakdown{}, err
-	}
-	frontPanelMat, _, err := s.resolveJobMaterial(models.RoleDoorPanel, woodSpecies, finishType, drawerFront.PanelType)
-	if frontPanelMat.ID == 0 {
-		frontPanelMat, _, err = s.materialByID(drawerFront.PanelMaterialID)
+	var frontPanelMat models.Material
+	if drawerFront.PanelType == models.PanelTypeFlat {
+		tSpecies := woodSpecies
+		if finishType == models.FinishPainted {
+			tSpecies = models.SpeciesPaintGrade
+		}
+		frontPanelMat, _, err = s.materialByRoleAndSpecies(models.RoleDoorPanel, tSpecies)
+	} else if drawerFront.PanelType == models.PanelTypeRaisedSheet {
+		frontPanelMat, _, err = s.materialByRoleAndSpecies(models.RoleSlabSheet, models.SpeciesPaintGrade)
+	} else if drawerFront.PanelType == models.PanelTypeRaisedSolid {
+		frontPanelMat = frontFrameMat
 	}
 	if err != nil {
 		return models.CabinetCostBreakdown{}, err

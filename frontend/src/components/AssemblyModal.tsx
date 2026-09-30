@@ -69,8 +69,6 @@ export default function AssemblyModal({ assembly, materials, hardware, onClose, 
   const coreOptions = useMemo(() => {
     switch (type) {
       case 'box': return materialSelect(materials, ['box_core']);
-      case 'door':
-      case 'drawer_front': return materialSelect(materials, ['door_frame', 'slab_sheet', 'frame_lumber']);
       case 'drawer_box': return materialSelect(materials, ['drawer_side']);
       default: return [];
     }
@@ -87,16 +85,11 @@ export default function AssemblyModal({ assembly, materials, hardware, onClose, 
   const panelOptions = useMemo(() => {
     if (!(isDoor || isFront)) return [];
     switch (panelType) {
-      case 'raised_solid': return materialSelect(materials, ['frame_lumber', 'door_frame']);
-      case 'raised_sheet': return materialSelect(materials, ['slab_sheet']);
-      default: return materialSelect(materials, ['door_panel']);
+      case 'raised_solid': return [];
+      case 'raised_sheet': return [];
+      default: return [];
     }
   }, [isDoor, isFront, panelType, materials]);
-
-  const faceLumberOptions = useMemo(
-    () => (isBox && style === 'face_frame' ? materialSelect(materials, ['frame_lumber']) : []),
-    [isBox, style, materials],
-  );
 
   const edgebandOptions = useMemo(
     () => (isBox && style === 'frameless' ? materialSelect(materials, ['edgeband']) : []),
@@ -127,8 +120,8 @@ export default function AssemblyModal({ assembly, materials, hardware, onClose, 
       return;
     }
     const coreID = showMaterials ? nullableId(coreMaterialID) : undefined;
-    if (showMaterials && coreID === undefined) {
-      setError('Core / frame material is required.');
+    if (showMaterials && (isBox || isDrawerBox) && coreID === undefined) {
+      setError('Core material is required.');
       return;
     }
     onSave({
@@ -246,22 +239,24 @@ export default function AssemblyModal({ assembly, materials, hardware, onClose, 
 
         {showMaterials && (
           <>
-            <div>
-              <label className={labelClass} htmlFor="assembly-core">
-                {isDoor ? 'Frame / Slab Material' : isFront ? 'Frame / Slab Material' : isDrawerBox ? 'Side Material' : 'Core Material'}
-              </label>
-              <select
-                id="assembly-core"
-                className={inputClass}
-                value={coreMaterialID}
-                onChange={(e) => setCoreMaterialID(e.target.value)}
-              >
-                <option value="">— Select —</option>
-                {coreOptions.map((o) => (
-                  <option key={o.id} value={o.id}>{o.name}</option>
-                ))}
-              </select>
-            </div>
+            {(isBox || isDrawerBox) && (
+              <div>
+                <label className={labelClass} htmlFor="assembly-core">
+                  {isDrawerBox ? 'Side Material' : 'Core Material'}
+                </label>
+                <select
+                  id="assembly-core"
+                  className={inputClass}
+                  value={coreMaterialID}
+                  onChange={(e) => setCoreMaterialID(e.target.value)}
+                >
+                  <option value="">— Select —</option>
+                  {coreOptions.map((o) => (
+                    <option key={o.id} value={o.id}>{o.name}</option>
+                  ))}
+                </select>
+              </div>
+            )}
 
             {(isBox || isDrawerBox) && (
               <div>
@@ -316,27 +311,6 @@ export default function AssemblyModal({ assembly, materials, hardware, onClose, 
                   </div>
                 </div>
 
-                <div>
-                  <label className={labelClass} htmlFor="assembly-panel">
-                    {panelType === 'raised_solid'
-                      ? 'Solid Wood Panel Material'
-                      : panelType === 'raised_sheet'
-                        ? 'Raised Panel Material (3/4" sheet)'
-                        : 'Panel Material (1/4" sheet)'}
-                  </label>
-                  <select
-                    id="assembly-panel"
-                    className={inputClass}
-                    value={panelMaterialID}
-                    onChange={(e) => setPanelMaterialID(e.target.value)}
-                  >
-                    <option value="">— Select —</option>
-                    {panelOptions.map((o) => (
-                      <option key={o.id} value={o.id}>{o.name}</option>
-                    ))}
-                  </select>
-                </div>
-
                 {panelType === 'raised_solid' && (
                   <div>
                     <label className={labelClass} htmlFor="assembly-panel-prep">
@@ -354,23 +328,6 @@ export default function AssemblyModal({ assembly, materials, hardware, onClose, 
                   </div>
                 )}
               </>
-            )}
-
-            {isBox && style === 'face_frame' && (
-              <div>
-                <label className={labelClass} htmlFor="assembly-face-lumber">Face Frame Lumber</label>
-                <select
-                  id="assembly-face-lumber"
-                  className={inputClass}
-                  value={faceLumberID}
-                  onChange={(e) => setFaceLumberID(e.target.value)}
-                >
-                  <option value="">— Select —</option>
-                  {faceLumberOptions.map((o) => (
-                    <option key={o.id} value={o.id}>{o.name}</option>
-                  ))}
-                </select>
-              </div>
             )}
 
             {isBox && style === 'frameless' && (
