@@ -243,3 +243,45 @@ func migrateDataV5(database *sql.DB) error {
 	}
 	return nil
 }
+
+// Rebuild table without global unique constraint on name if needed
+func removeGlobalUniqueAssemblyName(database *sql.DB) error {
+	// First, check if the table actually has a UNIQUE constraint on just name.
+	// We can check if there's an index for it, or just blindly recreate it.
+	// Since SQLite doesn't let us easily drop a constraint, we recreate the table.
+	_, err := database.Exec(`
+		PRAGMA foreign_keys = OFF;
+		CREATE TABLE IF NOT EXISTS construction_assemblies_new (
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			name TEXT NOT NULL,
+			type TEXT NOT NULL,
+			construction_style TEXT DEFAULT 'face_frame',
+			core_material_id INTEGER REFERENCES materials(id),
+			back_material_id INTEGER REFERENCES materials(id),
+			panel_material_id INTEGER REFERENCES materials(id),
+			face_lumber_id INTEGER REFERENCES materials(id),
+			edgeband_id INTEGER REFERENCES materials(id),
+			hardware_id INTEGER REFERENCES hardware(id),
+			is_outsourced BOOLEAN DEFAULT 0,
+			requires_finish BOOLEAN DEFAULT 0,
+			requires_edgeband BOOLEAN DEFAULT 0,
+			panel_type TEXT DEFAULT 'flat',
+			frame_joinery TEXT DEFAULT 'cope_and_stick',
+			finish_labor_hours REAL DEFAULT 0.0,
+			prep_labor_hours REAL DEFAULT 0.0,
+			panel_prep_labor_hours REAL DEFAULT 0.0,
+			build_labor_hours REAL DEFAULT 0.0,
+			is_default BOOLEAN DEFAULT 0,
+			created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+			UNIQUE(name, type)
+		);
+		INSERT OR IGNORE INTO construction_assemblies_new SELECT * FROM construction_assemblies;
+		DROP TABLE construction_assemblies;
+		ALTER TABLE construction_assemblies_new RENAME TO construction_assemblies;
+		PRAGMA foreign_keys = ON;
+	`)
+	if err != nil {
+		return fmt.Errorf("rebuild construction_assemblies: %w", err)
+	}
+	return nil
+}

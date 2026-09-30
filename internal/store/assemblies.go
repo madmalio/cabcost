@@ -13,8 +13,8 @@ import (
 func (s *Store) GetAssemblies(assemblyType string) ([]models.Assembly, error) {
 	query := `SELECT id, name, type, construction_style, core_material_id, back_material_id,
 		panel_material_id, face_lumber_id, edgeband_id, hardware_id, is_outsourced,
-		requires_finish, requires_edgeband, panel_type, frame_joinery, finish_labor_hours,
-		prep_labor_hours, panel_prep_labor_hours, build_labor_hours, is_default, created_at
+		requires_finish, requires_edgeband, COALESCE(panel_type, 'flat'), COALESCE(frame_joinery, 'cope_and_stick'),
+		finish_labor_hours, prep_labor_hours, panel_prep_labor_hours, build_labor_hours, is_default, created_at
 		FROM construction_assemblies`
 	args := []any{}
 
@@ -34,10 +34,27 @@ func (s *Store) GetAssemblies(assemblyType string) ([]models.Assembly, error) {
 	for rows.Next() {
 		var a models.Assembly
 		if err := rows.Scan(
-			&a.ID, &a.Name, &a.Type, &a.ConstructionStyle,
-			&a.CoreMaterialID, &a.BackMaterialID, &a.PanelMaterialID, &a.FaceLumberID, &a.EdgebandID, &a.HardwareID,
-			&a.IsOutsourced, &a.RequiresFinish, &a.RequiresEdgeband, &a.PanelType, &a.FrameJoinery, &a.FinishLaborHours,
-			&a.PrepLaborHours, &a.PanelPrepLaborHours, &a.BuildLaborHours, &a.IsDefault, &a.CreatedAt,
+			&a.ID,
+			&a.Name,
+			&a.Type,
+			&a.ConstructionStyle,
+			&a.CoreMaterialID,
+			&a.BackMaterialID,
+			&a.PanelMaterialID,
+			&a.FaceLumberID,
+			&a.EdgebandID,
+			&a.HardwareID,
+			&a.IsOutsourced,
+			&a.RequiresFinish,
+			&a.RequiresEdgeband,
+			&a.PanelType,
+			&a.FrameJoinery,
+			&a.FinishLaborHours,
+			&a.PrepLaborHours,
+			&a.PanelPrepLaborHours,
+			&a.BuildLaborHours,
+			&a.IsDefault,
+			&a.CreatedAt,
 		); err != nil {
 			return nil, fmt.Errorf("scan assembly: %w", err)
 		}
@@ -68,6 +85,15 @@ func (s *Store) SaveAssembly(a models.Assembly) error {
 	}
 	if a.PrepLaborHours < 0 || a.BuildLaborHours < 0 || a.PanelPrepLaborHours < 0 {
 		return fmt.Errorf("labor hours cannot be negative")
+	}
+
+	var existingID int64
+	checkErr := s.db.QueryRow(
+		`SELECT id FROM construction_assemblies WHERE name = ? AND type = ? AND id != ?`,
+		strings.TrimSpace(a.Name), a.Type, a.ID,
+	).Scan(&existingID)
+	if checkErr == nil {
+		return fmt.Errorf("an assembly named %q already exists in %s", a.Name, a.Type)
 	}
 
 	if a.ID == 0 {

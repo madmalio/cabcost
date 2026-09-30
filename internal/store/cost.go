@@ -24,10 +24,10 @@ const (
 
 const assemblyCols = `id, name, type, construction_style, core_material_id, back_material_id,
 	panel_material_id, face_lumber_id, edgeband_id, hardware_id, is_outsourced,
-	requires_finish, requires_edgeband, panel_type, frame_joinery, finish_labor_hours,
-	prep_labor_hours, panel_prep_labor_hours, build_labor_hours, is_default, created_at`
+	requires_finish, requires_edgeband, COALESCE(panel_type, 'flat'), COALESCE(frame_joinery, 'cope_and_stick'),
+	finish_labor_hours, prep_labor_hours, panel_prep_labor_hours, build_labor_hours, is_default, created_at`
 
-const materialCols = `id, name, role, unit, unit_cost, waste_percent, created_at`
+const materialCols = `id, name, role, species, unit, unit_cost, waste_percent, created_at`
 
 const hardwareCols = `id, name, category, unit, unit_cost, is_default, created_at`
 
@@ -38,17 +38,34 @@ type rowScanner interface {
 func scanAssembly(r rowScanner) (models.Assembly, error) {
 	var a models.Assembly
 	err := r.Scan(
-		&a.ID, &a.Name, &a.Type, &a.ConstructionStyle,
-		&a.CoreMaterialID, &a.BackMaterialID, &a.PanelMaterialID, &a.FaceLumberID, &a.EdgebandID, &a.HardwareID,
-		&a.IsOutsourced, &a.RequiresFinish, &a.RequiresEdgeband, &a.PanelType, &a.FrameJoinery, &a.FinishLaborHours,
-		&a.PrepLaborHours, &a.PanelPrepLaborHours, &a.BuildLaborHours, &a.IsDefault, &a.CreatedAt,
+		&a.ID,
+		&a.Name,
+		&a.Type,
+		&a.ConstructionStyle,
+		&a.CoreMaterialID,
+		&a.BackMaterialID,
+		&a.PanelMaterialID,
+		&a.FaceLumberID,
+		&a.EdgebandID,
+		&a.HardwareID,
+		&a.IsOutsourced,
+		&a.RequiresFinish,
+		&a.RequiresEdgeband,
+		&a.PanelType,
+		&a.FrameJoinery,
+		&a.FinishLaborHours,
+		&a.PrepLaborHours,
+		&a.PanelPrepLaborHours,
+		&a.BuildLaborHours,
+		&a.IsDefault,
+		&a.CreatedAt,
 	)
 	return a, err
 }
 
 func scanMaterial(r rowScanner) (models.Material, error) {
 	var m models.Material
-	err := r.Scan(&m.ID, &m.Name, &m.Role, &m.Unit, &m.UnitCost, &m.WastePercent, &m.CreatedAt)
+	err := r.Scan(&m.ID, &m.Name, &m.Role, &m.Species, &m.Unit, &m.UnitCost, &m.WastePercent, &m.CreatedAt)
 	return m, err
 }
 

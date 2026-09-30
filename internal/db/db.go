@@ -42,7 +42,7 @@ CREATE TABLE IF NOT EXISTS shop_settings (
 
 CREATE TABLE IF NOT EXISTS construction_assemblies (
 	id INTEGER PRIMARY KEY AUTOINCREMENT,
-	name TEXT NOT NULL UNIQUE,
+	name TEXT NOT NULL,
 	type TEXT NOT NULL,
 	construction_style TEXT DEFAULT 'face_frame',
 	core_material_id INTEGER REFERENCES materials(id),
@@ -61,7 +61,8 @@ CREATE TABLE IF NOT EXISTS construction_assemblies (
 	panel_prep_labor_hours REAL DEFAULT 0.0,
 	build_labor_hours REAL DEFAULT 0.0,
 	is_default BOOLEAN DEFAULT 0,
-	created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+	created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+	UNIQUE(name, type)
 );
 
 CREATE TABLE IF NOT EXISTS cabinet_catalog (
@@ -176,6 +177,15 @@ func Open(path string) (*sql.DB, error) {
 // migrate applies lightweight, additive migrations for databases created
 // before a column existed. Each step is guarded so it is idempotent.
 func migrate(database *sql.DB) error {
+	if err := addColumnIfMissing(database, "materials", "species", "TEXT DEFAULT 'paint_grade'"); err != nil {
+		return err
+	}
+	if err := addColumnIfMissing(database, "quotes", "wood_species", "TEXT DEFAULT 'paint_grade'"); err != nil {
+		return err
+	}
+	if err := addColumnIfMissing(database, "quotes", "finish_type", "TEXT DEFAULT 'painted'"); err != nil {
+		return err
+	}
 	if err := addColumnIfMissing(database, "hardware", "is_default", "BOOLEAN DEFAULT 0"); err != nil {
 		return err
 	}
@@ -204,6 +214,13 @@ func migrate(database *sql.DB) error {
 		return err
 	}
 	if err := addColumnIfMissing(database, "quotes", "has_edge_detail", "BOOLEAN DEFAULT 0"); err != nil {
+		return err
+	}
+
+	_, _ = database.Exec(`UPDATE construction_assemblies SET frame_joinery = 'cope_and_stick' WHERE frame_joinery IS NULL OR frame_joinery = '';`)
+	_, _ = database.Exec(`UPDATE construction_assemblies SET panel_type = 'flat' WHERE panel_type IS NULL OR panel_type = '';`)
+
+	if err := removeGlobalUniqueAssemblyName(database); err != nil {
 		return err
 	}
 

@@ -125,7 +125,7 @@ export default function AssemblyModal({ assembly, materials, hardware, onClose, 
       return;
     }
     onSave({
-      id: assembly?.id ?? 0,
+      id: assembly ? assembly.id : 0,
       name: name.trim(),
       type,
       construction_style: style,

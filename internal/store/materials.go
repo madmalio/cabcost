@@ -10,7 +10,7 @@ import (
 // GetMaterials returns all materials ordered by name.
 func (s *Store) GetMaterials() ([]models.Material, error) {
 	rows, err := s.db.Query(
-		`SELECT id, name, role, unit, unit_cost, waste_percent, created_at
+		`SELECT id, name, role, species, unit, unit_cost, waste_percent, created_at
 		 FROM materials ORDER BY name COLLATE NOCASE`)
 	if err != nil {
 		return nil, fmt.Errorf("query materials: %w", err)
@@ -20,7 +20,7 @@ func (s *Store) GetMaterials() ([]models.Material, error) {
 	materials := []models.Material{}
 	for rows.Next() {
 		var m models.Material
-		if err := rows.Scan(&m.ID, &m.Name, &m.Role, &m.Unit, &m.UnitCost, &m.WastePercent, &m.CreatedAt); err != nil {
+		if err := rows.Scan(&m.ID, &m.Name, &m.Role, &m.Species, &m.Unit, &m.UnitCost, &m.WastePercent, &m.CreatedAt); err != nil {
 			return nil, fmt.Errorf("scan material: %w", err)
 		}
 		materials = append(materials, m)

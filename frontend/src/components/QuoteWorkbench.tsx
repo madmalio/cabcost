@@ -29,6 +29,8 @@ import {
   quoteStatusLabel,
   QUOTE_STATUSES,
   retailFromCost,
+  WOOD_SPECIES,
+  FINISH_TYPES,
 } from '../constants';
 import Badge from './Badge';
 import ConfirmDialog from './ConfirmDialog';
@@ -359,6 +361,36 @@ export default function QuoteWorkbench({ quoteId, onBack, onDuplicate }: QuoteWo
               </div>
               <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-3">
                 <div>
+                  <label className={labelClass}>Wood Species</label>
+                  <select
+                    className={inputClass}
+                    value={quote.wood_species || 'paint_grade'}
+                    onChange={(e) => patchQuote({ wood_species: e.target.value })}
+                  >
+                    {WOOD_SPECIES.map((s) => (
+                      <option key={s.value} value={s.value}>{s.label}</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className={labelClass}>Finish Type</label>
+                  <select
+                    className={inputClass}
+                    value={quote.finish_type || 'painted'}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      patchQuote({ 
+                        finish_type: val,
+                        is_finished: val !== 'unfinished'
+                      });
+                    }}
+                  >
+                    {FINISH_TYPES.map((f) => (
+                      <option key={f.value} value={f.value}>{f.label}</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
                   <label className={labelClass}>Status</label>
                   <select className={inputClass} value={quote.status} onChange={(e) => patchQuote({ status: e.target.value })}>
                     {QUOTE_STATUSES.map((s) => (
@@ -366,6 +398,8 @@ export default function QuoteWorkbench({ quoteId, onBack, onDuplicate }: QuoteWo
                     ))}
                   </select>
                 </div>
+              </div>
+              <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-3">
                 <div>
                   <label className={labelClass}>Box Assembly</label>
                   <select className={inputClass} value={quote.box_assembly_id} onChange={(e) => patchQuote({ box_assembly_id: Number(e.target.value) })}>
@@ -382,8 +416,6 @@ export default function QuoteWorkbench({ quoteId, onBack, onDuplicate }: QuoteWo
                     ))}
                   </select>
                 </div>
-              </div>
-              <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-3">
                 <div>
                   <label className={labelClass}>Drawer Front Style</label>
                   <select className={inputClass} value={quote.drawer_front_assembly_id} onChange={(e) => patchQuote({ drawer_front_assembly_id: Number(e.target.value) })}>
@@ -392,6 +424,8 @@ export default function QuoteWorkbench({ quoteId, onBack, onDuplicate }: QuoteWo
                     ))}
                   </select>
                 </div>
+              </div>
+              <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-3">
                 <div>
                   <label className={labelClass}>Drawer Box Type</label>
                   <select className={inputClass} value={quote.drawer_assembly_id} onChange={(e) => patchQuote({ drawer_assembly_id: Number(e.target.value) })}>
@@ -400,31 +434,6 @@ export default function QuoteWorkbench({ quoteId, onBack, onDuplicate }: QuoteWo
                     ))}
                   </select>
                 </div>
-                <div>
-                  <label className={labelClass}>Finish</label>
-                  <div className="flex gap-2">
-                    <button
-                      type="button"
-                      onClick={() => patchQuote({ is_finished: false })}
-                      className={`flex-1 rounded-lg border px-3 py-2 text-sm font-medium transition-colors ${
-                        !quote.is_finished ? 'border-zinc-500 bg-zinc-700 text-zinc-100' : 'border-zinc-800 bg-zinc-900 text-zinc-500 hover:bg-zinc-800'
-                      }`}
-                    >
-                      Unfinished
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => patchQuote({ is_finished: true })}
-                      className={`flex-1 rounded-lg border px-3 py-2 text-sm font-medium transition-colors ${
-                        quote.is_finished ? 'border-zinc-500 bg-zinc-700 text-zinc-100' : 'border-zinc-800 bg-zinc-900 text-zinc-500 hover:bg-zinc-800'
-                      }`}
-                    >
-                      Finished
-                    </button>
-                  </div>
-                </div>
-              </div>
-              <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-3">
                 <div>
                   <label className={labelClass}>Target Margin %</label>
                   <input
@@ -436,20 +445,20 @@ export default function QuoteWorkbench({ quoteId, onBack, onDuplicate }: QuoteWo
                     onChange={(e) => patchQuote({ target_margin_percent: Number(e.target.value) || 0 })}
                   />
                 </div>
-              </div>
-              <div className="mt-4 flex items-start gap-3 rounded-lg border border-zinc-800 bg-zinc-950/40 p-3">
-                <input
-                  type="checkbox"
-                  id="edge-detail"
-                  className="mt-0.5 h-4 w-4 rounded border-zinc-600 bg-zinc-800 accent-zinc-100"
-                  checked={quote.has_edge_detail}
-                  onChange={(e) => patchQuote({ has_edge_detail: e.target.checked })}
-                />
-                <div>
-                  <label htmlFor="edge-detail" className="cursor-pointer text-sm font-medium text-zinc-200">
-                    Outside Edge Detail
-                  </label>
-                  <p className="text-xs text-zinc-500">Adds shaper &amp; detail-sanding labor to all doors and drawer fronts.</p>
+                <div className="flex items-center gap-3 rounded-lg border border-zinc-800 bg-zinc-950/40 p-3">
+                  <input
+                    type="checkbox"
+                    id="edge-detail"
+                    className="h-4 w-4 rounded border-zinc-600 bg-zinc-800 accent-zinc-100 shrink-0"
+                    checked={quote.has_edge_detail}
+                    onChange={(e) => patchQuote({ has_edge_detail: e.target.checked })}
+                  />
+                  <div>
+                    <label htmlFor="edge-detail" className="cursor-pointer text-sm font-medium text-zinc-200 block">
+                      Outside Edge Detail
+                    </label>
+                    <p className="text-xs text-zinc-500 mt-0.5">Adds shaper labor to doors & fronts.</p>
+                  </div>
                 </div>
               </div>
             </div>
